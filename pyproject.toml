@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "capguard"
+version = "0.1.0.dev0"
+description = "Deterministic security runtime for AI agents: attenuable capabilities, argument-level policy, data provenance, MCP guard + proxy, sandboxed execution, and tamper-evident audit."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Vamsi Sai Ranga Mangina", email = "44197358+harsha-mangena@users.noreply.github.com" }]
+keywords = ["ai-agents", "security", "mcp", "least-privilege", "owasp", "capabilities", "prompt-injection"]
+dependencies = [
+  "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+# signed plugins + YAML policy packs (legacy/optional)
+crypto = ["cryptography>=43.0"]
+yaml = ["pyyaml>=6.0"]
+dev = ["pytest>=8.2", "ruff>=0.4"]
+
+[project.scripts]
+capguard-bench = "capguard.bench.run_bench:main"
+
+[project.urls]
+Homepage = "https://github.com/harsha-mangena/probe"
+
+[tool.setuptools.packages.find]
+include = ["capguard*"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
