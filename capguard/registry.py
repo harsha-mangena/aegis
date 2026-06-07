@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Callable, Dict, List, Optional
 
 from .core import Capability, Severity, ToolSpec
+from .provenance import Label
 
 
 class RegisteredTool:
@@ -24,6 +25,7 @@ class ToolRegistry:
         capabilities: Optional[List[Capability]] = None,
         description: str = "",
         severity: Severity = Severity.MEDIUM,
+        output_label: Optional[Label] = None,
     ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             tool_name = name or func.__name__
@@ -34,6 +36,7 @@ class ToolRegistry:
                 description=description or (func.__doc__ or "").strip(),
                 capabilities=capabilities or [],
                 severity=severity,
+                output_label=output_label,
             )
             self._tools[tool_name] = RegisteredTool(spec, func)
             return func

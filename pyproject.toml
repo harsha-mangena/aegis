@@ -19,10 +19,15 @@ dependencies = [
 # signed plugins + YAML policy packs (legacy/optional)
 crypto = ["cryptography>=43.0"]
 yaml = ["pyyaml>=6.0"]
-dev = ["pytest>=8.2", "ruff>=0.4"]
+# verifiable identity with asymmetric (Ed25519) signing for cross-trust-domain use
+identity = ["cryptography>=43.0"]
+# live + real-AgentDojo benchmark adapter
+agentdojo = ["agentdojo>=0.1"]
+dev = ["pytest>=8.2", "hypothesis>=6.0", "ruff>=0.4"]
 
 [project.scripts]
 capguard-bench = "capguard.bench.run_bench:main"
+capguard-agentdojo = "capguard.bench.run_agentdojo:main"
 
 [project.urls]
 Homepage = "https://github.com/harsha-mangena/probe"

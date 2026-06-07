@@ -18,13 +18,26 @@ from .policy_dsl import (
     CallContext,
     Decision,
     Effect,
+    Flow,
     NOT,
     OR,
     PolicyEngine,
     Provenance,
     Rule,
+    Taint,
     role_in,
     tool_is,
+)
+from .provenance import (
+    Confidentiality,
+    Label,
+    ProvenanceTracker,
+    Trust,
+    SECRET,
+    TRUSTED,
+    UNTRUSTED_TOOL,
+    UNTRUSTED_WEB,
+    combine_all,
 )
 
 __all__ = [
@@ -46,12 +59,24 @@ __all__ = [
     "CallContext",
     "Arg",
     "Provenance",
+    "Taint",
+    "Flow",
     "AND",
     "OR",
     "NOT",
     "role_in",
     "tool_is",
     "ANY_TOOL",
+    # provenance / information-flow engine
+    "Label",
+    "Trust",
+    "Confidentiality",
+    "ProvenanceTracker",
+    "TRUSTED",
+    "UNTRUSTED_TOOL",
+    "UNTRUSTED_WEB",
+    "SECRET",
+    "combine_all",
 ]
 
 # MCP security engine
@@ -89,6 +114,80 @@ __all__ += [
     "ApprovalStore",
     "ApprovalToken",
     "args_digest",
+]
+
+# Verifiable identity + delegation attenuation (ASI03)
+from .identity import (  # noqa: E402
+    Ed25519Signer,
+    HMACSigner,
+    IdentityClaims,
+    IdentityError,
+    IdentityIssuer,
+    IdentityVerifier,
+    SignedIdentity,
+)
+
+__all__ += [
+    "Ed25519Signer",
+    "HMACSigner",
+    "IdentityClaims",
+    "IdentityError",
+    "IdentityIssuer",
+    "IdentityVerifier",
+    "SignedIdentity",
+]
+
+# Framework adapters (embed under LangGraph / OpenAI Agents / CrewAI / raw)
+from .adapters import (  # noqa: E402
+    CapGuard,
+    GuardedTool,
+    to_crewai,
+    to_langchain,
+    to_openai_agents,
+)
+
+__all__ += [
+    "CapGuard",
+    "GuardedTool",
+    "to_langchain",
+    "to_openai_agents",
+    "to_crewai",
+]
+
+# Rogue-agent detection + circuit breaker (ASI10 / ASI08)
+from .monitor import (  # noqa: E402
+    Anomaly,
+    AnomalyKind,
+    AnomalyPolicy,
+    BehaviorMonitor,
+    CircuitBreaker,
+)
+
+__all__ += [
+    "Anomaly",
+    "AnomalyKind",
+    "AnomalyPolicy",
+    "BehaviorMonitor",
+    "CircuitBreaker",
+]
+
+# Task / intent-scoped capability envelopes (P6)
+from .taskscope import (  # noqa: E402
+    ArgConstraint,
+    ConstraintOp,
+    TaskScope,
+    TaskScopeError,
+    TaskScopeIssuer,
+    ToolScope,
+)
+
+__all__ += [
+    "ArgConstraint",
+    "ConstraintOp",
+    "TaskScope",
+    "TaskScopeError",
+    "TaskScopeIssuer",
+    "ToolScope",
 ]
 
 # MCP proxy (runnable)

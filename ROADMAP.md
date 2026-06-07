@@ -18,22 +18,34 @@ Legend: ✅ done · 🔜 next · 🔭 later · status against the 2026 OWASP Top
 - ✅ **Runnable MCP proxy** — strips poisoned tools from `tools/list`, enforces every call. *(ASI04, ASI07)*
 - ✅ **Sandboxed execution backends** — subprocess (rlimits) / docker / deny. *(ASI05, ASI08)*
 - ✅ **Deterministic security benchmark** — ASR/utility/latency, CI gate.
+- ✅ **Provenance propagation engine** — trust+confidentiality label lattice propagated across tool I/O; `Taint`/`Flow` predicates; catches *laundering* the old per-call provenance missed. *(ASI01, ASI06)*
+- ✅ **Verifiable identity + delegation attenuation** — signed (HMAC/Ed25519) assertions bound to principal+tenant, verified at the proxy boundary; sub-agent delegation only narrows authority. *(ASI03, ASI07)*
+- ✅ **Normalize-before-enforce hardening** — NFKC + control/zero-width/NUL rejection so encoded payloads can't slip past `enforce`. *(ASI02)*
+- ✅ **Property-based + fuzz tests** (Hypothesis) — lattice algebra, attenuation monotonicity, audit-chain tamper-evidence, smuggling rejection.
+- ✅ **Framework adapters** — one-line `CapGuard` facade + `to_langchain` / `to_openai_agents` / `to_crewai` native bindings.
+- ✅ **Real-AgentDojo adapter** — deterministic ground-truth replay across all four suites (97 user / 35 injection): **ASR 0% @ 100% utility**.
+- ✅ **Rogue-agent detection + circuit breaker** — deterministic sliding-window anomaly detection (call/denial-rate, blast-radius, novel-tool) over the audit stream → per-agent kill switch; runtime fail-closes. *(ASI10, ASI08)*
+- ✅ **Task/intent-scoped capability envelopes** — PAuth-style signed, expiring, per-argument-constrained JIT grants; issuing only attenuates. *(ASI02, ASI03)*
+
+> **All ten OWASP ASI risks now have a shipped mechanism** (none left as ✗). 125 tests passing.
 
 ---
 
 ## 🔜 Next (target: v0.1)
 
-### 1. Verifiable agent identity *(ASI03 — the last "trust me" hole)*
-Today `agent_id` is self-asserted at the proxy/gateway boundary. Plan:
-- Signed identity assertions (Ed25519, reuse the plugin-signing keys) binding an agent to a **human principal + tenant**.
-- Verification at the proxy/gateway boundary; reject unsigned or mismatched identities.
-- **Zero standing permissions** + just-in-time capability grants (the `ephemeral` grant path becomes the norm).
-- Map to the OWASP Non-Human-Identity Top 10.
+### 1. Live-LLM AgentDojo (build on the shipped deterministic adapter)
+The deterministic ground-truth replay ships (`capguard.bench.run_agentdojo`,
+ASR 0% @ 100% utility on all four suites). Next:
+- Drive `agentdojo.agent_pipeline` with a real model (API key) through the same
+  enforcement loop; publish end-to-end ASR with CapGuard as the action backstop.
+- Auto-assign provenance from the tracker during the live run (instead of from
+  the known ground-truth source), and add ASB / InjecAgent / AgentDyn.
+- Citable comparison table vs Progent / CaMeL / LlamaFirewall / AgentArmor.
 
-### 2. Live-LLM AgentDojo adapter
-- Wire the real AgentDojo (and ASB / InjecAgent) into the benchmark harness behind the existing `Scenario` interface.
-- Publish end-to-end ASR with CapGuard as the enforcement layer, alongside the deterministic numbers.
-- Goal: a reproducible, citable comparison vs Progent / CaMeL / LlamaFirewall.
+### 2. Ed25519/SPIFFE identity in production
+Signed identity + delegation attenuation ship (HMAC default, Ed25519 optional).
+Next: JWT-SVID/SPIFFE issuance integration, OIDC principal binding, map to the
+OWASP Non-Human-Identity Top 10, and an AIP-style verifiable-delegation envelope.
 
 ### 3. Streamable-HTTP MCP transport
 - Add the remote MCP transport (Streamable HTTP / SSE) next to stdio, so the proxy guards hosted MCP servers, not just local subprocesses.
@@ -55,9 +67,10 @@ Today `agent_id` is self-asserted at the proxy/gateway boundary. Plan:
 - gVisor (`runtime=runsc`) and Firecracker/microVM execution backends for hostile code at scale.
 - eBPF-based egress and filesystem enforcement for the subprocess tier (true network isolation without a container).
 
-### Rogue-agent detection *(ASI10)*
-- Sequence-level anomaly detection over the hash-chained audit stream: unusual tool-call sequences, privilege drift, blast-radius breaches → alert + kill switch.
-- Per-agent/session budgets and circuit breakers feeding back into the DSL.
+### Rogue-agent detection *(ASI10)* — core shipped
+Deterministic anomaly detection + circuit breaker ship (`capguard.monitor`). Next:
+- Richer sequence models (n-gram / order-aware tool-call patterns, privilege-drift scoring) as *advisory* signals feeding the deterministic breaker.
+- Per-agent/session token & $ budgets feeding back into the DSL as a `RATE_LIMIT`/`DENY` effect.
 
 ### Full provenance / taint
 - Move from tool-boundary tagging to propagation across tool I/O (toward CaMeL-style soundness), while keeping it a library hook, not a forked interpreter.

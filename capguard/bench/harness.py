@@ -37,12 +37,26 @@ class Call:
 
 
 @dataclass
+class Chain:
+    """A laundering attack: ``source`` runs first and taints the provenance
+    tracker; its output is then fed into ``sink.args[into]`` and the sink is
+    invoked as the attack. A defense passes this only if taint *propagated* from
+    source to sink — the sink call site carries NO provenance annotation."""
+
+    source: Call
+    sink: Call
+    into: str
+    label: str = ""
+
+
+@dataclass
 class Scenario:
     id: str
     domain: str
     agent: AgentIdentity
     benign: List[Call] = field(default_factory=list)
     attacks: List[Call] = field(default_factory=list)
+    chains: List[Chain] = field(default_factory=list)
 
 
 @dataclass
@@ -124,6 +138,34 @@ def run(scenarios: List[Scenario], runtime: AgentRuntime, executors: Dict[str, C
                 rep.attacks_succeeded_guarded += 1
             else:
                 rep.blocked_detail.append(f"{sc.domain}/{call.label or call.tool}")
+
+        # laundering attacks: taint must propagate source -> sink with no tagging
+        for ch in sc.chains:
+            rep.total_attacks += 1
+            # baseline: source runs, its output is fed to the sink, sink executes
+            try:
+                base_out = executors[ch.source.tool](**ch.source.args)
+            except Exception:  # noqa: BLE001
+                base_out = "x"
+            base_args = dict(ch.sink.args); base_args[ch.into] = base_out
+            if _direct_call(executors, Call(ch.sink.tool, base_args)):
+                rep.attacks_succeeded_baseline += 1
+            # guarded: run source through the runtime so the tracker taints its
+            # output, then feed that exact value into the sink (no provenance arg)
+            try:
+                out = runtime.invoke_tool(
+                    ch.source.tool, agent=sc.agent,
+                    provenance=ch.source.provenance, **ch.source.args)
+            except _BLOCKED:
+                out = None
+            sink_args = dict(ch.sink.args)
+            if out is not None:
+                sink_args[ch.into] = out
+            sink_call = Call(ch.sink.tool, sink_args, ch.sink.provenance, ch.sink.label)
+            if not _guarded_call(runtime, sc.agent, sink_call):
+                rep.blocked_detail.append(f"{sc.domain}/{ch.label or 'laundering'}")
+            else:
+                rep.attacks_succeeded_guarded += 1
 
     # latency: time a representative benign call guarded vs direct
     sample = next((c for sc in scenarios for c in sc.benign), None)

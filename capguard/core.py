@@ -22,10 +22,13 @@ from __future__ import annotations
 import fnmatch
 import os
 import shlex
+import unicodedata
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+from .provenance import Label
 
 
 class CapabilityType(str, Enum):
@@ -59,6 +62,34 @@ _SHELL_METACHARACTERS = set(";|&<>`$\n\r")
 
 class CapabilityViolation(PermissionError):
     """Raised by Capability.enforce when actual arguments exceed the grant."""
+
+
+# --------------------------------------------------------------------------- #
+# Normalize-before-enforce (P5 hardening).
+#
+# Every string we enforce on is first NFKC-normalized and screened for smuggling
+# characters. Without this, an enforcement check can be talked past with encoding
+# tricks the *executor* later collapses: a fullwidth semicolon (`U+FF1B`) that
+# folds to `;`, a zero-width space splitting a blocked command, a NUL byte
+# truncating a path, or homoglyph/format-control characters hiding intent. We
+# canonicalize first so the check sees what the OS/network layer will actually
+# act on.
+# --------------------------------------------------------------------------- #
+def _nfkc(s: str) -> str:
+    return unicodedata.normalize("NFKC", s)
+
+
+def _reject_smuggled(s: str, what: str) -> None:
+    if "\x00" in s:
+        raise CapabilityViolation(f"{what} contains a NUL byte")
+    for ch in s:
+        if ch in "\t\n\r":
+            continue
+        # Cc = control, Cf = format (zero-width joiners, BOM, bidi overrides …)
+        if unicodedata.category(ch) in ("Cc", "Cf"):
+            raise CapabilityViolation(
+                f"{what} contains hidden control/format characters (possible smuggling)"
+            )
 
 
 class Capability(BaseModel):
@@ -173,7 +204,8 @@ class Capability(BaseModel):
         t = self.type
 
         if t is CapabilityType.SHELL_EXEC:
-            cmd = str(value)
+            cmd = _nfkc(str(value))
+            _reject_smuggled(cmd, "shell command")
             if any(c in _SHELL_METACHARACTERS for c in cmd):
                 raise CapabilityViolation(
                     "shell command contains shell metacharacters; chaining/redirection is not allowed"
@@ -193,7 +225,9 @@ class Capability(BaseModel):
         if t is CapabilityType.NETWORK_HTTP:
             from urllib.parse import urlparse
 
-            host = (urlparse(str(value)).hostname or "").lower()
+            raw = _nfkc(str(value))
+            _reject_smuggled(raw, "url")
+            host = (urlparse(raw).hostname or "").lower().rstrip(".")
             domains = set(d.lower() for d in self.params.get("domains", []))
             if "*" in domains:
                 return
@@ -205,7 +239,9 @@ class Capability(BaseModel):
             raise CapabilityViolation(f"host {host!r} is not in the allowed domains {sorted(domains)}")
 
         if t in (CapabilityType.FILE_READ, CapabilityType.FILE_WRITE):
-            target = os.path.realpath(str(value))
+            raw = _nfkc(str(value))
+            _reject_smuggled(raw, "path")
+            target = os.path.realpath(raw)
             roots = self.params.get("paths", [])
             for root in roots:
                 if _path_contains(root, target):
@@ -244,10 +280,18 @@ def _path_contains(root_pattern: str, real_target: str) -> bool:
 
 
 class ToolSpec(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     name: str
     description: str = ""
     capabilities: List[Capability] = Field(default_factory=list)
     severity: Severity = Severity.MEDIUM
+    # Intrinsic information-flow label of this tool's OUTPUT. A source tool that
+    # reads attacker-influenceable data (web fetch, inbox, file in a shared dir)
+    # declares e.g. ``Label(trust=Trust.UNTRUSTED_WEB)`` so the provenance tracker
+    # taints everything derived from its result. ``None`` = pass-through (the
+    # output is only as tainted as the inputs it was computed from).
+    output_label: Optional[Label] = None
 
 
 class AgentIdentity(BaseModel):
@@ -266,6 +310,23 @@ class AgentIdentity(BaseModel):
             if held.covers(requested):
                 return held
         return None
+
+    def attenuate(self, capabilities: List[Capability]) -> "AgentIdentity":
+        """Return a narrowed copy holding only ``capabilities``.
+
+        Raises ``PermissionError`` if any requested capability is not already
+        covered by this identity: attenuation can only *drop* authority, never
+        add it. This is the zero-standing-permissions / just-in-time grant
+        primitive — hand an agent a broad identity, then attenuate to exactly the
+        capabilities a task needs for the duration of that task.
+        """
+        for cap in capabilities:
+            if not self.covers(cap):
+                raise PermissionError(
+                    f"attenuation would expand authority for {cap.type.value!r} capability"
+                )
+        return AgentIdentity(id=self.id, roles=list(self.roles),
+                             allowed_capabilities=list(capabilities))
 
 
 class PolicyDecision(str, Enum):

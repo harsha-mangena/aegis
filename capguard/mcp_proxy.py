@@ -30,6 +30,7 @@ import threading
 from typing import Any, Callable, Dict, List, Mapping, Optional, Protocol, Sequence, TextIO
 
 from .core import AgentIdentity, ApprovalRequired, CapabilityViolation
+from .identity import IdentityError, IdentityVerifier, SignedIdentity
 from .mcp_guard import MCPGuard, MCPSecurityError, MCPToolDef
 
 PROTOCOL_VERSION = "2025-06-18"
@@ -181,12 +182,19 @@ class MCPProxy:
         downstreams: Sequence[Downstream],
         server_name: str = "capguard-proxy",
         default_provenance: Optional[Dict[str, Dict[str, str]]] = None,
+        identity_verifier: Optional[IdentityVerifier] = None,
+        require_signed_identity: bool = False,
     ) -> None:
         self._guard = guard
         self._agent = agent
         self._downstreams = {d.server_id: d for d in downstreams}
         self._server_name = server_name
         self._default_provenance = default_provenance or {}
+        # ASI03: when a verifier is configured, the caller's identity is taken
+        # from a signed assertion in the call params, not the (self-asserted)
+        # default agent. With require_signed_identity, an unsigned call is denied.
+        self._identity_verifier = identity_verifier
+        self._require_signed_identity = require_signed_identity
         # exposed_name -> (server_id, original_name)
         self._name_map: Dict[str, tuple[str, str]] = {}
         self.refresh()
@@ -257,10 +265,23 @@ class MCPProxy:
         server_id, name = mapping
         provenance = self._default_provenance.get(exposed, {})
 
+        # resolve the caller identity (signed assertion overrides the default)
+        agent = self._agent
+        if self._identity_verifier is not None:
+            ident = params.get("_capguard_identity")
+            if ident is None:
+                if self._require_signed_identity:
+                    return self._tool_error(req_id, "BLOCKED by CapGuard: a signed identity is required")
+            else:
+                try:
+                    agent = self._identity_verifier.verify(SignedIdentity.from_dict(ident))
+                except (IdentityError, KeyError, ValueError, TypeError) as exc:
+                    return self._tool_error(req_id, f"BLOCKED by CapGuard: identity verification failed ({exc})")
+
         try:
             result = self._guard.guard_call(
                 server_id, name, arguments,
-                agent=self._agent, provenance=provenance, approval_token=approval_token,
+                agent=agent, provenance=provenance, approval_token=approval_token,
             )
         except ApprovalRequired as exc:
             return self._tool_error(

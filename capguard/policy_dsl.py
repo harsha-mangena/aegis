@@ -20,6 +20,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
+from .provenance import Confidentiality, Label, Trust
+
 
 class Effect(str, Enum):
     ALLOW = "allow"
@@ -102,6 +104,72 @@ class Provenance:
 
     def is_trusted(self) -> Predicate:
         return lambda c: c.provenance.get(self._arg, "trusted") == "trusted"
+
+
+class Taint:
+    """Reason about a value's *propagated* information-flow label.
+
+    Unlike :class:`Provenance` (which reads a label supplied at the call site),
+    ``Taint`` reads the label the :class:`~capguard.provenance.ProvenanceTracker`
+    carried forward through prior tool calls. A rule written with ``Taint`` holds
+    across a whole laundering chain without the agent annotating anything:
+
+        ``Rule(trigger=tool_is("send_email"), when=Taint("to").below("trusted"),
+               effect=Effect.DENY)``
+
+    blocks an email whose recipient was derived from web/tool output, even if the
+    call site never tagged it.
+    """
+
+    def __init__(self, arg: str) -> None:
+        self._arg = arg
+
+    def _label(self, c: "CallContext") -> Label:
+        return c.extra.get("labels", {}).get(self._arg, Label())
+
+    def at_least(self, trust: str | Trust) -> Predicate:
+        t = trust if isinstance(trust, Trust) else Trust.from_str(str(trust))
+        return lambda c: self._label(c).trust >= t
+
+    def below(self, trust: str | Trust) -> Predicate:
+        t = trust if isinstance(trust, Trust) else Trust.from_str(str(trust))
+        return lambda c: self._label(c).trust < t
+
+    def is_untrusted(self) -> Predicate:
+        return self.below(Trust.TRUSTED)
+
+    def is_secret(self) -> Predicate:
+        return lambda c: self._label(c).confidentiality >= Confidentiality.SECRET
+
+
+class Flow:
+    """Predicates over the data flowing into *any* argument of a call.
+
+    The confidentiality companion to integrity checks: ``Flow.any_secret()`` is
+    the deterministic "a secret must not reach this sink" rule — attach it as the
+    trigger's ``when`` on exfiltration sinks (email/messaging/HTTP).
+    """
+
+    @staticmethod
+    def _labels(c: "CallContext") -> Sequence[Label]:
+        return list(c.extra.get("labels", {}).values())
+
+    @staticmethod
+    def any_secret() -> Predicate:
+        return lambda c: any(l.confidentiality >= Confidentiality.SECRET for l in Flow._labels(c))
+
+    @staticmethod
+    def any_untrusted() -> Predicate:
+        return lambda c: any(l.trust < Trust.TRUSTED for l in Flow._labels(c))
+
+    @staticmethod
+    def secret_present_and_untrusted_present() -> Predicate:
+        """Secret data AND attacker-influenced data in the same call → exfil shape."""
+        def _p(c: "CallContext") -> bool:
+            labels = Flow._labels(c)
+            return (any(l.confidentiality >= Confidentiality.SECRET for l in labels)
+                    and any(l.trust < Trust.TRUSTED for l in labels))
+        return _p
 
 
 def AND(*ps: Predicate) -> Predicate:

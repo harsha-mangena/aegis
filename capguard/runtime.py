@@ -28,8 +28,12 @@ from .core import (
     PolicyDecision,
     ToolSpec,
 )
+from .identity import Signer
+from .monitor import CIRCUIT_OPEN_ERROR, CircuitBreaker
 from .policy_dsl import CallContext, Decision, Effect, PolicyEngine
+from .provenance import Label, ProvenanceTracker
 from .registry import ToolRegistry
+from .taskscope import TaskScope
 
 ApprovalHandler = Callable[[AuditEvent, ToolSpec], bool]
 
@@ -45,6 +49,9 @@ class AgentRuntime:
         approval_handler: Optional[ApprovalHandler] = None,
         approval_store: Optional[Any] = None,
         default_agent: Optional[AgentIdentity] = None,
+        tracker: Optional[ProvenanceTracker] = None,
+        circuit_breaker: Optional[CircuitBreaker] = None,
+        task_scope_signer: Optional[Signer] = None,
     ) -> None:
         self._registry = registry
         self._policy = policy or Policy()
@@ -53,6 +60,24 @@ class AgentRuntime:
         self._approval_handler = approval_handler
         self._approval_store = approval_store
         self._default_agent = default_agent
+        # Optional kill switch (ASI10/ASI08): when an agent's breaker is open,
+        # every call fails closed until it is reset or its cooldown elapses.
+        self._circuit_breaker = circuit_breaker
+        # Optional signer used to verify signed task scopes (P6) at this boundary.
+        self._task_scope_signer = task_scope_signer
+        # Optional information-flow tracker. When present, every argument's
+        # propagated label is computed before policy evaluation and every result
+        # is labeled after dispatch, so taint flows across the whole call chain.
+        self._tracker = tracker
+
+    # ------------------------------------------------------------------ #
+    @property
+    def registry(self) -> ToolRegistry:
+        return self._registry
+
+    @property
+    def default_agent(self) -> Optional[AgentIdentity]:
+        return self._default_agent
 
     # ------------------------------------------------------------------ #
     def _emit(self, event: AuditEvent) -> None:
@@ -86,6 +111,7 @@ class AgentRuntime:
         request_id: Optional[str] = None,
         provenance: Optional[Dict[str, str]] = None,
         approval_token: Optional[str] = None,
+        task_scope: Optional[TaskScope] = None,
         **kwargs: Any,
     ) -> Any:
         agent = agent or self._default_agent
@@ -95,13 +121,28 @@ class AgentRuntime:
         registered = self._registry.get(name)
         tool: ToolSpec = registered.spec
 
+        # Information-flow labels for each argument. Start from what the tracker
+        # propagated (empty if no tracker), then fold in any explicit call-site
+        # labels. ``combine`` takes the most-restrictive trust, so an explicit
+        # "trusted" can never launder a value the tracker already tainted.
+        arg_labels: Dict[str, Label] = (
+            self._tracker.labels_for_args(kwargs) if self._tracker is not None else {}
+        )
+        for arg_name, trust_str in (provenance or {}).items():
+            arg_labels[arg_name] = arg_labels.get(arg_name, Label()).combine(
+                Label.from_trust_str(trust_str)
+            )
+        # String view consumed by the back-compat Provenance(...) predicate.
+        prov_strs = {k: lbl.trust_str for k, lbl in arg_labels.items()}
+
         ctx = CallContext(
             agent_id=agent.id,
             tool_name=tool.name,
             args=dict(kwargs),
             roles=tuple(agent.roles),
             request_id=request_id,
-            provenance=provenance or {},
+            provenance=prov_strs,
+            extra={"labels": arg_labels},
         )
 
         event = AuditEvent(
@@ -111,6 +152,32 @@ class AgentRuntime:
             params={k: digest(v) for k, v in kwargs.items()},  # store digests, not raw payloads
             request_id=request_id,
         )
+
+        # 0. kill switch — a tripped breaker halts the agent before anything else.
+        if self._circuit_breaker is not None and self._circuit_breaker.is_open(agent.id):
+            event.error = CIRCUIT_OPEN_ERROR
+            self._emit(event)
+            raise PermissionError(
+                f"agent {agent.id!r} is halted by the circuit breaker: "
+                f"{self._circuit_breaker.reason(agent.id)}"
+            )
+
+        # 0.5 task/intent scope — JIT least privilege for one specific task (P6).
+        # Enforced on top of standing capabilities; it can only tighten.
+        if task_scope is not None:
+            if task_scope.signature and self._task_scope_signer is not None and not task_scope.verify(self._task_scope_signer):
+                event.error = "invalid_task_scope_signature"
+                self._emit(event)
+                raise PermissionError(f"task scope signature invalid for tool {name!r}")
+            if task_scope.agent_id != agent.id:
+                event.error = "task_scope_agent_mismatch"
+                self._emit(event)
+                raise PermissionError(f"task scope is bound to a different agent for tool {name!r}")
+            ok, reason = task_scope.check_call(tool.name, kwargs, required_caps=tool.capabilities)
+            if not ok:
+                event.error = f"denied_by_task_scope: {reason}"
+                self._emit(event)
+                raise PermissionError(f"denied by task scope ({reason}) for tool {name!r}")
 
         # 1. baseline capability gate
         base = self._policy.evaluate(agent=agent, tool=tool)
@@ -186,6 +253,13 @@ class AgentRuntime:
         # 4. dispatch + 5. audit
         try:
             result = registered.func(**kwargs)
+            # Propagate taint onto the result so the next call inherits it.
+            if self._tracker is not None:
+                out_label = self._tracker.record_output(
+                    result, list(kwargs.values()), source=tool.output_label
+                )
+                if out_label != Label():
+                    event.effect = (event.effect or "") + f"|out_trust={out_label.trust_str}"
             event.result_digest = digest(result)
             self._emit(event)
             return result
