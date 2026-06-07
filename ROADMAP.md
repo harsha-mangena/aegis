@@ -26,8 +26,10 @@ Legend: ✅ done · 🔜 next · 🔭 later · status against the 2026 OWASP Top
 - ✅ **Real-AgentDojo adapter** — deterministic ground-truth replay across all four suites (97 user / 35 injection): **ASR 0% @ 100% utility**.
 - ✅ **Rogue-agent detection + circuit breaker** — deterministic sliding-window anomaly detection (call/denial-rate, blast-radius, novel-tool) over the audit stream → per-agent kill switch; runtime fail-closes. *(ASI10, ASI08)*
 - ✅ **Task/intent-scoped capability envelopes** — PAuth-style signed, expiring, per-argument-constrained JIT grants; issuing only attenuates. *(ASI02, ASI03)*
+- ✅ **Provenance-preserving memory / RAG guard** — taint survives the write→read round-trip; optional deny-untrusted-writes. *(ASI06)*
+- ✅ **Policy-pack compiler** — declarative YAML/JSON/dict profiles → `PolicyEngine` + capability templates; builtin `owasp-baseline` / `finance` / `data-exfil`.
 
-> **All ten OWASP ASI risks now have a shipped mechanism** (none left as ✗). 125 tests passing.
+> **Every one of the ten OWASP ASI risks now has a deterministic shipped mechanism (all ✓).** 143 tests passing, 1 skipped (Docker).
 
 ---
 
@@ -51,9 +53,10 @@ OWASP Non-Human-Identity Top 10, and an AIP-style verifiable-delegation envelope
 - Add the remote MCP transport (Streamable HTTP / SSE) next to stdio, so the proxy guards hosted MCP servers, not just local subprocesses.
 - Per-tool / per-arg default provenance config; a provenance-propagating client shim.
 
-### 4. Policy-pack compiler
-- Translate the existing YAML policy packs (OWASP baseline, finance, healthcare) directly into `PolicyEngine` rules + capability templates, so a pack is a one-line import.
-- Ship more packs (data-exfiltration baseline, coding-agent baseline, browser-agent baseline).
+### 4. Policy-pack compiler — core shipped
+Compiler + `owasp-baseline` / `finance` / `data-exfil` packs ship (`capguard.packs`).
+Next: more packs (healthcare, coding-agent, browser-agent), a `capguard packs lint`
+CLI, and signed/pinned pack distribution.
 
 ### 5. Packaging & docs
 - Finalize `pyproject` (console scripts: `capguard-proxy`, `capguard-bench`), CI workflow (lint + test + benchmark gate), publish to PyPI.

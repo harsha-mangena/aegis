@@ -190,6 +190,33 @@ __all__ += [
     "ToolScope",
 ]
 
+# Provenance-preserving memory / RAG guard (ASI06)
+from .memory import MemoryPoisoningError, ProvenanceMemory  # noqa: E402
+
+__all__ += [
+    "MemoryPoisoningError",
+    "ProvenanceMemory",
+]
+
+# Policy packs (declarative profiles -> PolicyEngine)
+from .packs import (  # noqa: E402
+    BUILTIN_PACKS,
+    PackError,
+    builtin_pack_names,
+    compile_pack,
+    load_pack,
+    pack_capabilities,
+)
+
+__all__ += [
+    "BUILTIN_PACKS",
+    "PackError",
+    "builtin_pack_names",
+    "compile_pack",
+    "load_pack",
+    "pack_capabilities",
+]
+
 # MCP proxy (runnable)
 from .mcp_proxy import (  # noqa: E402
     InProcessDownstream,

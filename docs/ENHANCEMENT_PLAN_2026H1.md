@@ -117,10 +117,12 @@ All five prioritized phases landed, tests green throughout (**50 → 105 passing
 | **P3** Real-AgentDojo adapter | ✅ | `capguard/bench/agentdojo_adapter.py` + `run_agentdojo.py`: deterministic ground-truth replay, all four suites → **97 user / 35 injection, utility 100%, ASR 0.0%**; `tests/test_agentdojo_adapter.py` |
 | **ASI10** Rogue-agent detection + kill switch | ✅ | `capguard/monitor.py` (sliding-window anomaly detection + per-agent `CircuitBreaker`), runtime fail-close gate; `tests/test_monitor.py` (9) |
 | **P6** Task/intent-scoped capability envelopes | ✅ | `capguard/taskscope.py` (signed, expiring, per-arg-constrained JIT grants; issuing only attenuates), runtime task-scope gate; `tests/test_taskscope.py` (11) |
+| **ASI06** Provenance-preserving memory | ✅ | `capguard/memory.py` (taint survives write→read; optional deny mode); `tests/test_memory.py` (8) |
+| **Policy-pack compiler** | ✅ | `capguard/packs.py` (declarative profiles → `PolicyEngine` + capability templates; builtin owasp-baseline/finance/data-exfil); `tests/test_packs.py` (10) |
 
-**Total: 50 → 125 tests passing, 1 skipped.** Both benchmarks hold (scripted 15/15 @ 0% ASR; real AgentDojo 97+35 @ 0% ASR / 100% utility).
+**Total: 50 → 143 tests passing, 1 skipped.** Both benchmarks hold (scripted 15/15 @ 0% ASR; real AgentDojo 97+35 @ 0% ASR / 100% utility).
 
-**ASI coverage — every risk now has a shipped mechanism (no ✗):** ASI01 ◑→✓ (propagated taint), ASI02 ✓ (hardened + task-scoped), ASI03 ◑→✓ (verifiable identity + delegation), ASI06 ◑→ stronger, ASI07 ✓ (+ delegation attenuation), ASI08 ✓ (+ circuit breaker), ASI10 ✗→✓ (anomaly detection + kill switch).
+**ASI coverage — every one of the ten risks is now ✓ (a deterministic shipped mechanism):** ASI01 (propagated taint), ASI02 (hardened + task-scoped), ASI03 (verifiable identity + delegation), ASI04 (MCP pin/scan), ASI05 (sandbox), ASI06 (provenance-preserving memory), ASI07 (shadowing + delegation attenuation), ASI08 (+ circuit breaker), ASI09 (replay-safe approvals), ASI10 (anomaly detection + kill switch).
 
 **What's next (post-build):** live-LLM AgentDojo (drive `agentdojo.agent_pipeline` with a real model + auto-provenance from the tracker), Ed25519/SPIFFE issuance + OIDC binding, streamable-HTTP MCP transport, a policy-pack compiler (YAML → rules), and richer (advisory) sequence models feeding the deterministic breaker.
 

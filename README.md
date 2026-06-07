@@ -4,11 +4,11 @@
 
 CapGuard is an embeddable Python SDK that makes any agent stack (LangGraph, CrewAI, AutoGen, OpenAI Agents, custom loops, or raw MCP) safe by default. It is **not** a prompt classifier and **not** a guardrail that tries to guess intent. It is a deterministic enforcement runtime: it decides — from capabilities, policy, and data provenance — whether a concrete tool call is allowed, denied, or needs human approval, and it backs that decision with hard isolation and a tamper-evident audit trail.
 
-**Status:** active development. Core is implemented and tested. **125 tests passing** (1 skipped: Docker backend); deterministic security benchmark at **0% attack-success rate / 100% utility / ~0.04 ms per-call overhead**. On the **real AgentDojo benchmark** (97 user + 35 injection tasks across all four suites), one general provenance profile holds **ASR 0.0% at 100% utility** under deterministic ground-truth replay. **All ten OWASP ASI risks now have a shipped mechanism** (none left as ✗).
+**Status:** active development. Core is implemented and tested. **143 tests passing** (1 skipped: Docker backend); deterministic security benchmark at **0% attack-success rate / 100% utility / ~0.04 ms per-call overhead**. On the **real AgentDojo benchmark** (97 user + 35 injection tasks across all four suites), one general provenance profile holds **ASR 0.0% at 100% utility** under deterministic ground-truth replay. **All ten OWASP ASI risks now carry a shipped mechanism — every row is ✓.**
 
 ```bash
 pip install -e .                 # or: poetry install
-PYTHONPATH=. pytest -q           # 125 passed, 1 skipped
+PYTHONPATH=. pytest -q           # 143 passed, 1 skipped
 PYTHONPATH=. python -m capguard.bench.run_bench       # scripted security benchmark table
 PYTHONPATH=. python -m capguard.bench.run_agentdojo   # real AgentDojo (pip install agentdojo)
 ```
@@ -40,6 +40,8 @@ CapGuard fills that gap. It is the deterministic backstop: even when a model is 
 | **Sandboxed execution** | `sandbox` | Execution backends with isolation tiers: hardened `SubprocessBackend` (POSIX rlimits, no-shell, env scrub, timeout-kill), ephemeral `DockerBackend` (`--network none`, read-only, caps dropped), and `DenyBackend`. |
 | **Rogue-agent detection + kill switch** | `monitor` | Deterministic sliding-window anomaly detection over the audit stream — call-rate, denial-rate (probing), blast-radius (distinct sinks), novel-tool — trips a per-agent **circuit breaker**; the runtime then fail-closes that agent. (ASI10/ASI08) |
 | **Task-scoped capability envelopes** | `taskscope` | PAuth-style JIT least privilege: a signed, expiring envelope authorizes only the concrete operations a task implies (`transfer ≤ $100 to Bob`), enforced per-call on top of standing capabilities. Issuing can only attenuate. |
+| **Memory / RAG poisoning guard** | `memory` | Provenance-preserving memory: taint survives the write→read round-trip so recalled untrusted content is still blocked at sinks; optional deny-untrusted-writes mode. (ASI06) |
+| **Policy packs** | `packs` | Declarative YAML/JSON/dict profiles compile to a `PolicyEngine` (and capability templates). Ship `owasp-baseline` / `finance` / `data-exfil`; adopt a strong default in one line. |
 | **Benchmark harness** | `bench` | Deterministic scripted suite + **real AgentDojo** adapter measuring ASR / utility / latency, wired as a CI gate. |
 
 ---
@@ -131,13 +133,13 @@ CapGuard measures **deterministic enforcement** — does it block the malicious 
 | ASI03 Identity & privilege abuse | ✓ | verifiable signed identity (principal+tenant), delegation-only-attenuates, JIT grants |
 | ASI04 Agentic supply chain | ✓ | signed plugins, MCP pinning, poisoning scan |
 | ASI05 Unexpected code execution | ✓ | sandbox backends |
-| ASI06 Memory/context poisoning | ◑ | propagated provenance on writes (require trusted source) |
+| ASI06 Memory/context poisoning | ✓ | provenance-preserving memory/RAG: taint survives write→read; optional deny-untrusted-writes |
 | ASI07 Insecure inter-agent comms | ✓ | shadowing detection + list-strip; delegation attenuation across hops |
 | ASI08 Cascading failures | ✓ | rate limits, resource caps, blast-radius cap + **circuit-breaker kill switch** |
 | ASI09 Human-agent trust | ✓ | replay-safe approvals |
 | ASI10 Rogue agents | ✓ | **sequence-anomaly detection** over the audit stream → circuit breaker |
 
-✓ covered · ◑ partial · ✗ planned. Every risk now has a shipped mechanism (no ✗). See [`ROADMAP.md`](ROADMAP.md).
+✓ covered · ◑ partial · ✗ planned. **Every row is now ✓** — a deterministic mechanism for all ten ASI risks. See [`ROADMAP.md`](ROADMAP.md).
 
 ---
 
@@ -153,6 +155,8 @@ capguard/
   identity.py      signed identity assertions, verification, delegation attenuation (ASI03)
   taskscope.py     task/intent-scoped capability envelopes (PAuth-style JIT least privilege)
   monitor.py       rogue-agent anomaly detection + circuit breaker / kill switch (ASI10/ASI08)
+  memory.py        provenance-preserving memory/RAG store (anti context-poisoning, ASI06)
+  packs.py         policy-pack compiler (declarative profiles -> PolicyEngine) + builtin packs
   adapters.py      one-line guard + LangChain/OpenAI-Agents/CrewAI bindings
   audit.py         hash-chained tamper-evident audit + sinks
   approval.py      replay-safe, args-bound approval tokens
@@ -160,7 +164,7 @@ capguard/
   mcp_proxy.py     runnable JSON-RPC MCP proxy (stdio) + downstream clients; signed-identity gate
   sandbox.py       execution backends (subprocess / docker / deny) + tool factories
   bench/           scripted security benchmark + real AgentDojo adapter + CI gate
-tests/             125 tests (provenance, identity, adapters, properties, AgentDojo, monitor, taskscope, …)
+tests/             143 tests (provenance, identity, adapters, properties, AgentDojo, monitor, taskscope, memory, packs, …)
 examples/          runnable MCP server + guarded proxy launcher
 docs/              strategy memo, enhancement plan, benchmark results
 ```
