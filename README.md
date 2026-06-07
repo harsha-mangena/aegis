@@ -4,13 +4,18 @@
 
 CapGuard is an embeddable Python SDK that makes any agent stack (LangGraph, CrewAI, AutoGen, OpenAI Agents, custom loops, or raw MCP) safe by default. It is **not** a prompt classifier and **not** a guardrail that tries to guess intent. It is a deterministic enforcement runtime: it decides — from capabilities, policy, and data provenance — whether a concrete tool call is allowed, denied, or needs human approval, and it backs that decision with hard isolation and a tamper-evident audit trail.
 
-**Status:** active development. Core is implemented and tested. **146 tests passing** (1 skipped: Docker backend); deterministic security benchmark at **0% attack-success rate / 100% utility / ~0.04 ms per-call overhead**. On the **real AgentDojo benchmark** (97 user + 35 injection tasks across all four suites), one general provenance profile holds **ASR 0.0% at 100% utility** under deterministic ground-truth replay. **All ten OWASP ASI risks now carry a shipped mechanism — every row is ✓.**
+**Status:** active development. Core is implemented and tested. **157 tests passing** (1 skipped: Docker backend); deterministic security benchmark at **0% attack-success rate / 100% utility / ~0.04 ms per-call overhead**. On the **real AgentDojo benchmark** (97 user + 35 injection tasks across all four suites), one general provenance profile holds **ASR 0.0% at 100% utility** under deterministic ground-truth replay. **All ten OWASP ASI risks now carry a shipped mechanism — every row is ✓.**
 
 ```bash
 pip install -e .                 # or: poetry install
-PYTHONPATH=. pytest -q           # 146 passed, 1 skipped
-PYTHONPATH=. python -m capguard.bench.run_bench       # scripted security benchmark table
-PYTHONPATH=. python -m capguard.bench.run_agentdojo   # real AgentDojo (pip install agentdojo)
+PYTHONPATH=. pytest -q           # 157 passed, 1 skipped
+
+capguard bench                       # scripted security benchmark (exit non-zero on regression)
+capguard agentdojo                   # real AgentDojo eval (pip install agentdojo)
+capguard packs list                  # builtin policy packs
+capguard audit verify audit.jsonl    # check the tamper-evident hash chain
+capguard mcp-scan tools.json         # scan MCP tool defs for poisoning
+capguard proxy proxy.json --check    # dry-run the guarded MCP proxy (lists exposed tools)
 ```
 
 ---
@@ -158,6 +163,7 @@ capguard/
   memory.py        provenance-preserving memory/RAG store (anti context-poisoning, ASI06)
   packs.py         policy-pack compiler (declarative profiles -> PolicyEngine) + builtin packs
   adapters.py      one-line guard + LangChain/OpenAI-Agents/CrewAI bindings
+  cli.py           `capguard` CLI: bench / agentdojo / audit verify / packs / mcp-scan / proxy
   audit.py         hash-chained tamper-evident audit + sinks
   approval.py      replay-safe, args-bound approval tokens
   mcp_guard.py     MCP pinning, rug-pull / shadowing / poisoning detection
@@ -165,7 +171,7 @@ capguard/
   mcp_http.py      Streamable-HTTP MCP transport: guard remote servers + serve the proxy over HTTP
   sandbox.py       execution backends (subprocess / docker / deny) + tool factories
   bench/           scripted security benchmark + real AgentDojo adapter + CI gate
-tests/             146 tests (provenance, identity, adapters, properties, AgentDojo, monitor, taskscope, memory, packs, http, …)
+tests/             157 tests (provenance, identity, adapters, properties, AgentDojo, monitor, taskscope, memory, packs, http, cli, …)
 examples/          runnable MCP server + guarded proxy launcher
 docs/              strategy memo, enhancement plan, benchmark results
 ```

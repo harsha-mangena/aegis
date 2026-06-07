@@ -26,6 +26,7 @@ agentdojo = ["agentdojo>=0.1"]
 dev = ["pytest>=8.2", "hypothesis>=6.0", "ruff>=0.4"]
 
 [project.scripts]
+capguard = "capguard.cli:main"
 capguard-bench = "capguard.bench.run_bench:main"
 capguard-agentdojo = "capguard.bench.run_agentdojo:main"
 

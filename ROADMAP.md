@@ -29,6 +29,7 @@ Legend: ✅ done · 🔜 next · 🔭 later · status against the 2026 OWASP Top
 - ✅ **Provenance-preserving memory / RAG guard** — taint survives the write→read round-trip; optional deny-untrusted-writes. *(ASI06)*
 - ✅ **Policy-pack compiler** — declarative YAML/JSON/dict profiles → `PolicyEngine` + capability templates; builtin `owasp-baseline` / `finance` / `data-exfil`.
 - ✅ **Streamable-HTTP MCP transport** — guard remote/hosted MCP servers (`HttpDownstream`) and serve the guarded proxy over HTTP (`MCPHttpServer`), stdlib-only. *(ASI04, ASI07)*
+- ✅ **Unified `capguard` CLI** — `bench` / `agentdojo` / `audit verify` / `packs list|show|lint` / `mcp-scan` / `proxy --check`, each with a CI-meaningful exit code.
 
 > **Every one of the ten OWASP ASI risks now has a deterministic shipped mechanism (all ✓).** 143 tests passing, 1 skipped (Docker).
 
