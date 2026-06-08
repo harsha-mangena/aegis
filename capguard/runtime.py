@@ -205,6 +205,7 @@ class AgentRuntime:
             tool_name=tool.name,
             decision=PolicyDecision.DENY,
             params={k: digest(v) for k, v in kwargs.items()},  # store digests, not raw payloads
+            arg_provenance=dict(prov_strs),                    # trust labels, for flow reconstruction
             request_id=request_id,
         )
 

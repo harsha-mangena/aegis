@@ -30,6 +30,7 @@ class AuditEvent(BaseModel):
     decision: PolicyDecision
     effect: Optional[str] = None          # policy-DSL effect, if any
     params: Dict[str, Any] = Field(default_factory=dict)
+    arg_provenance: Dict[str, str] = Field(default_factory=dict)  # arg -> trust label, for flow reconstruction
     result_digest: Optional[str] = None   # sha256 of result repr (no raw payload leak)
     error: Optional[str] = None
     request_id: Optional[str] = None

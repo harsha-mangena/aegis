@@ -4,17 +4,18 @@
 
 CapGuard is an embeddable Python SDK that makes any agent stack (LangGraph, CrewAI, AutoGen, OpenAI Agents, custom loops, or raw MCP) safe by default. It is **not** a prompt classifier and **not** a guardrail that tries to guess intent. It is a deterministic enforcement runtime: it decides — from capabilities, policy, and data provenance — whether a concrete tool call is allowed, denied, or needs human approval, and it backs that decision with hard isolation and a tamper-evident audit trail.
 
-**Status:** active development. Core is implemented and tested. **202 tests passing** (1 skipped: Docker backend); deterministic security benchmark at **0% attack-success rate / 100% utility / ~0.04 ms per-call overhead**. On the **real AgentDojo benchmark** (97 user + 35 injection tasks across all four suites), one general provenance profile holds **ASR 0.0% at 100% utility** under deterministic ground-truth replay. **All ten OWASP ASI risks now carry a shipped mechanism — every row is ✓.**
+**Status:** active development. Core is implemented and tested. **206 tests passing** (1 skipped: Docker backend); deterministic security benchmark at **0% attack-success rate / 100% utility / ~0.04 ms per-call overhead**. On the **real AgentDojo benchmark** (97 user + 35 injection tasks across all four suites), one general provenance profile holds **ASR 0.0% at 100% utility** under deterministic ground-truth replay. **All ten OWASP ASI risks now carry a shipped mechanism — every row is ✓.**
 
 ```bash
 pip install -e .                 # or: poetry install
-PYTHONPATH=. pytest -q           # 202 passed, 1 skipped
+PYTHONPATH=. pytest -q           # 206 passed, 1 skipped
 
 capguard bench                       # scripted security benchmark (exit non-zero on regression)
 capguard agentdojo                   # real AgentDojo eval (pip install agentdojo)
 capguard packs list                  # builtin policy packs
 capguard audit verify audit.jsonl    # check the tamper-evident hash chain
 capguard mcp-scan tools.json         # scan MCP tool defs for poisoning
+capguard audit flows audit.jsonl     # reconstruct data flow; flag untrusted->sink paths
 capguard proxy proxy.json --check    # dry-run the guarded MCP proxy (lists exposed tools)
 ```
 
@@ -41,6 +42,7 @@ CapGuard fills that gap. It is the deterministic backstop: even when a model is 
 | **Framework adapters** | `adapters` | `CapGuard(rt).tool(...)` guards a plain function in one line; `to_langchain` / `to_openai_agents` / `to_crewai` hand back native tool objects. CapGuard runs **underneath** LangGraph / OpenAI Agents / CrewAI / raw MCP — bring your stack. |
 | **Replay-safe approvals** | `approval` | Human-in-the-loop tokens bound to `(agent, tool, exact-args)`, HMAC-signed, single-use. Approving a $10 transfer cannot be replayed as $10,000 (TOCTOU defense). |
 | **Tamper-evident audit** | `audit` | Every decision is hash-chained (`prev_hash` + event → `hash`); any retroactive edit breaks the chain. Logs digests, not raw payloads. |
+| **Forensic flow reconstruction** | `audit_graph` | Rebuilds the data-flow graph from the audit log by matching one call's result digest to a later call's argument digests, tagged with trust labels — answers "which untrusted source reached which sink, through which hops" for incident response. Zero raw payloads. |
 | **MCP security engine** | `mcp_guard` | Pins tool definitions by fingerprint, detects **rug pulls** (changed defs), **shadowing** (cross-server name/description collisions), and **tool poisoning** (instruction-override / concealment / exfiltration / zero-width smuggling in descriptions). |
 | **Runnable MCP proxy** | `mcp_proxy`, `mcp_http` | A JSON-RPC proxy any MCP client connects to, over **stdio or Streamable HTTP**. Guards local subprocess *and* remote/hosted MCP servers. Poisoned/rug-pulled/shadowed tools are **stripped from `tools/list`** so the malicious description never reaches the model; every `tools/call` is enforced and audited. |
 | **OAuth 2.1 boundary auth** | `mcp_auth` | The HTTP MCP server is an OAuth 2.1 **resource server**: validates bearer tokens (stdlib HS256-JWT or static), pins `alg`, checks **audience** (RFC 8707), returns `401 + WWW-Authenticate` / `403` and serves Protected Resource Metadata (RFC 9728). Composes with the signed-identity gate. |
@@ -172,6 +174,7 @@ capguard/
   detectors.py     advisory detector hooks (CallableDetector + regex-injection / PII) feeding the DSL
   cli.py           `capguard` CLI: bench / agentdojo / audit verify / packs / mcp-scan / proxy
   audit.py         hash-chained tamper-evident audit + sinks
+  audit_graph.py   forensic data-flow reconstruction from the audit log (untrusted->sink paths)
   approval.py      replay-safe, args-bound approval tokens
   mcp_guard.py     MCP pinning, rug-pull / shadowing / poisoning detection
   mcp_proxy.py     runnable JSON-RPC MCP proxy (stdio) + downstream clients; signed-identity gate
@@ -179,7 +182,7 @@ capguard/
   mcp_auth.py      OAuth 2.1 resource-server auth (bearer/JWT verify, RFC 9728 PRM, RFC 8707 audience)
   sandbox.py       execution backends (subprocess / docker / deny) + tool factories
   bench/           scripted security benchmark + real AgentDojo adapter + CI gate
-tests/             202 tests (provenance, identity, a2a, adapters, properties, AgentDojo, monitor, budget, taskscope, memory, packs, http, auth, detectors, cli, …)
+tests/             206 tests (provenance, identity, a2a, adapters, properties, AgentDojo, monitor, budget, taskscope, memory, packs, http, auth, detectors, audit-graph, cli, …)
 examples/          runnable MCP server + guarded proxy launcher
 docs/              strategy memo, enhancement plan, benchmark results
 ```

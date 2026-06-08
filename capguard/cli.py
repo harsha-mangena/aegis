@@ -121,6 +121,18 @@ def _cmd_audit_verify(args) -> int:
     return 0 if ok else 1
 
 
+def _cmd_audit_flows(args) -> int:
+    from .audit_graph import _DEFAULT_SINKS, flow_graph_from_file, format_flows, tainted_sink_calls
+    try:
+        graph = flow_graph_from_file(args.path)
+    except FileNotFoundError:
+        print(f"error: no such file: {args.path}", file=sys.stderr)
+        return 2
+    sinks = [s.strip() for s in (args.sinks or "").split(",") if s.strip()] or _DEFAULT_SINKS
+    print(format_flows(graph, sinks))
+    return 1 if tainted_sink_calls(graph, sinks) else 0   # non-zero if an exfil path exists
+
+
 def _cmd_packs(args) -> int:
     from .packs import builtin_pack_names, compile_pack, load_pack
     if args.packs_cmd == "list":
@@ -234,6 +246,10 @@ def build_parser() -> argparse.ArgumentParser:
     av = asub.add_parser("verify", help="verify a hash-chained audit JSONL")
     av.add_argument("path")
     av.set_defaults(func=_cmd_audit_verify)
+    af = asub.add_parser("flows", help="reconstruct data-flow; list untrusted->sink paths")
+    af.add_argument("path")
+    af.add_argument("--sinks", default="", help="comma-separated tool globs (default: common sinks)")
+    af.set_defaults(func=_cmd_audit_flows)
 
     pk = sub.add_parser("packs", help="inspect / validate policy packs")
     pksub = pk.add_subparsers(dest="packs_cmd")

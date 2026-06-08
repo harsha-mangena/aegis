@@ -297,6 +297,25 @@ __all__ += [
     "AgentMessage",
 ]
 
+# Forensic provenance reconstruction from the audit chain
+from .audit_graph import (  # noqa: E402
+    FlowEdge,
+    FlowGraph,
+    FlowNode,
+    build_flow_graph,
+    flow_graph_from_file,
+    tainted_sink_calls,
+)
+
+__all__ += [
+    "FlowEdge",
+    "FlowGraph",
+    "FlowNode",
+    "build_flow_graph",
+    "flow_graph_from_file",
+    "tainted_sink_calls",
+]
+
 # Sandboxed execution (ASI05)
 from .sandbox import (  # noqa: E402
     DenyBackend,

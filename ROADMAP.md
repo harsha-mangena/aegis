@@ -34,6 +34,7 @@ Legend: ✅ done · 🔜 next · 🔭 later · status against the 2026 OWASP Top
 - ✅ **Advisory detector hooks** — `Detector` protocol + `CallableDetector` (wire any classifier) + built-in regex-injection / PII heuristics; `Signal(...)` DSL predicate. Deterministic-first: advisory-only, fail-open, can only tighten. *(ASI01)*
 - ✅ **Budgets & quotas** — cumulative call/token/$ ceilings per agent/session (cumulative or rolling window); overspend trips the circuit breaker. Closes unbounded consumption / doom-spirals. *(ASI08)*
 - ✅ **Signed inter-agent (A2A) messages** — signed message envelopes (anti impersonation/tamper), single-use nonce + expiry (anti-replay), and per-message capability attenuation across hops (the scope semantics A2A/Transaction-Tokens omit); inbound payloads tainted. *(ASI07)*
+- ✅ **Forensic provenance reconstruction** — rebuilds the data-flow graph from the tamper-evident audit log (result-digest → argument-digest edges + trust labels) and surfaces untrusted-source → sink paths for incident response; `capguard audit flows`. *(ASI10 evidence)*
 
 > **Every one of the ten OWASP ASI risks now has a deterministic shipped mechanism (all ✓).** 143 tests passing, 1 skipped (Docker).
 
