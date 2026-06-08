@@ -288,6 +288,15 @@ __all__ += [
     "Spend",
 ]
 
+# Signed inter-agent (A2A) messages (ASI07)
+from .a2a import A2AChannel, A2AError, AgentMessage  # noqa: E402
+
+__all__ += [
+    "A2AChannel",
+    "A2AError",
+    "AgentMessage",
+]
+
 # Sandboxed execution (ASI05)
 from .sandbox import (  # noqa: E402
     DenyBackend,

@@ -4,11 +4,11 @@
 
 CapGuard is an embeddable Python SDK that makes any agent stack (LangGraph, CrewAI, AutoGen, OpenAI Agents, custom loops, or raw MCP) safe by default. It is **not** a prompt classifier and **not** a guardrail that tries to guess intent. It is a deterministic enforcement runtime: it decides — from capabilities, policy, and data provenance — whether a concrete tool call is allowed, denied, or needs human approval, and it backs that decision with hard isolation and a tamper-evident audit trail.
 
-**Status:** active development. Core is implemented and tested. **190 tests passing** (1 skipped: Docker backend); deterministic security benchmark at **0% attack-success rate / 100% utility / ~0.04 ms per-call overhead**. On the **real AgentDojo benchmark** (97 user + 35 injection tasks across all four suites), one general provenance profile holds **ASR 0.0% at 100% utility** under deterministic ground-truth replay. **All ten OWASP ASI risks now carry a shipped mechanism — every row is ✓.**
+**Status:** active development. Core is implemented and tested. **202 tests passing** (1 skipped: Docker backend); deterministic security benchmark at **0% attack-success rate / 100% utility / ~0.04 ms per-call overhead**. On the **real AgentDojo benchmark** (97 user + 35 injection tasks across all four suites), one general provenance profile holds **ASR 0.0% at 100% utility** under deterministic ground-truth replay. **All ten OWASP ASI risks now carry a shipped mechanism — every row is ✓.**
 
 ```bash
 pip install -e .                 # or: poetry install
-PYTHONPATH=. pytest -q           # 190 passed, 1 skipped
+PYTHONPATH=. pytest -q           # 202 passed, 1 skipped
 
 capguard bench                       # scripted security benchmark (exit non-zero on regression)
 capguard agentdojo                   # real AgentDojo eval (pip install agentdojo)
@@ -37,6 +37,7 @@ CapGuard fills that gap. It is the deterministic backstop: even when a model is 
 | **Programmable policy DSL** | `policy_dsl` | Restrict by specific tool **and** use case: `Arg("amount") > 1000 → REQUIRE_APPROVAL`, rate limits, role checks. Deny-overrides precedence — a rule can only tighten. |
 | **Data-flow provenance (propagated)** | `provenance`, `runtime` | A trust/confidentiality **label lattice** propagated across tool I/O: a value pulled from an untrusted source and laundered through another tool stays tainted, so `Taint("recipient").is_untrusted() → DENY` and `Flow.any_secret() → DENY` hold across a whole call chain with no per-call tagging. Deterministic indirect-prompt-injection defense (CaMeL / RTBAS / AgentArmor class) delivered as a library hook — not a forked interpreter. |
 | **Verifiable identity + delegation** | `identity` | Signed (HMAC or Ed25519/SPIFFE-style) identity assertions bound to a human **principal + tenant**, verified at the proxy boundary — no more self-asserted `agent_id`. Sub-agent **delegation only attenuates**: a child can never hold authority its parent lacks (A2A-safe), with bounded chain depth and JIT expiry. |
+| **Signed inter-agent (A2A) messages** | `a2a` | Agent→agent messages are signed envelopes with single-use nonce + expiry (anti impersonation / tamper / replay) and **per-message capability attenuation** — a message can't exercise authority the sender lacks, and the receiver re-checks against the sender's known authority (defeats the cross-agent confused deputy). Inbound payloads are tainted `untrusted_tool`. (ASI07) |
 | **Framework adapters** | `adapters` | `CapGuard(rt).tool(...)` guards a plain function in one line; `to_langchain` / `to_openai_agents` / `to_crewai` hand back native tool objects. CapGuard runs **underneath** LangGraph / OpenAI Agents / CrewAI / raw MCP — bring your stack. |
 | **Replay-safe approvals** | `approval` | Human-in-the-loop tokens bound to `(agent, tool, exact-args)`, HMAC-signed, single-use. Approving a $10 transfer cannot be replayed as $10,000 (TOCTOU defense). |
 | **Tamper-evident audit** | `audit` | Every decision is hash-chained (`prev_hash` + event → `hash`); any retroactive edit breaks the chain. Logs digests, not raw payloads. |
@@ -142,7 +143,7 @@ CapGuard measures **deterministic enforcement** — does it block the malicious 
 | ASI04 Agentic supply chain | ✓ | signed plugins, MCP pinning, poisoning scan |
 | ASI05 Unexpected code execution | ✓ | sandbox backends |
 | ASI06 Memory/context poisoning | ✓ | provenance-preserving memory/RAG: taint survives write→read; optional deny-untrusted-writes |
-| ASI07 Insecure inter-agent comms | ✓ | shadowing detection + list-strip; delegation attenuation across hops |
+| ASI07 Insecure inter-agent comms | ✓ | shadowing detection + list-strip; **signed A2A messages** (anti replay/tamper) + per-message capability attenuation across hops |
 | ASI08 Cascading failures | ✓ | rate limits, **cumulative call/token/$ budgets**, blast-radius cap + **circuit-breaker kill switch** |
 | ASI09 Human-agent trust | ✓ | replay-safe approvals |
 | ASI10 Rogue agents | ✓ | **sequence-anomaly detection** over the audit stream → circuit breaker |
@@ -161,6 +162,7 @@ capguard/
   policy_dsl.py    trigger → predicate → effect rules; Arg / Provenance / Taint / Flow builders
   provenance.py    trust+confidentiality label lattice; ProvenanceTracker (propagated taint)
   identity.py      signed identity assertions, verification, delegation attenuation (ASI03)
+  a2a.py           signed inter-agent messages: anti replay/tamper + per-message capability attenuation (ASI07)
   taskscope.py     task/intent-scoped capability envelopes (PAuth-style JIT least privilege)
   monitor.py       rogue-agent anomaly detection + circuit breaker / kill switch (ASI10/ASI08)
   budget.py        cumulative call/token/$ budgets per agent/session; trips the breaker on overspend (ASI08)
@@ -177,7 +179,7 @@ capguard/
   mcp_auth.py      OAuth 2.1 resource-server auth (bearer/JWT verify, RFC 9728 PRM, RFC 8707 audience)
   sandbox.py       execution backends (subprocess / docker / deny) + tool factories
   bench/           scripted security benchmark + real AgentDojo adapter + CI gate
-tests/             190 tests (provenance, identity, adapters, properties, AgentDojo, monitor, budget, taskscope, memory, packs, http, auth, detectors, cli, …)
+tests/             202 tests (provenance, identity, a2a, adapters, properties, AgentDojo, monitor, budget, taskscope, memory, packs, http, auth, detectors, cli, …)
 examples/          runnable MCP server + guarded proxy launcher
 docs/              strategy memo, enhancement plan, benchmark results
 ```

@@ -33,6 +33,7 @@ Legend: ✅ done · 🔜 next · 🔭 later · status against the 2026 OWASP Top
 - ✅ **OAuth 2.1 resource-server auth on the HTTP MCP boundary** — bearer/JWT verify (alg-pinned HS256, audience per RFC 8707), `401`/`403` with `WWW-Authenticate`, Protected Resource Metadata (RFC 9728); composes with the signed-identity gate. *(ASI03, ASI07)*
 - ✅ **Advisory detector hooks** — `Detector` protocol + `CallableDetector` (wire any classifier) + built-in regex-injection / PII heuristics; `Signal(...)` DSL predicate. Deterministic-first: advisory-only, fail-open, can only tighten. *(ASI01)*
 - ✅ **Budgets & quotas** — cumulative call/token/$ ceilings per agent/session (cumulative or rolling window); overspend trips the circuit breaker. Closes unbounded consumption / doom-spirals. *(ASI08)*
+- ✅ **Signed inter-agent (A2A) messages** — signed message envelopes (anti impersonation/tamper), single-use nonce + expiry (anti-replay), and per-message capability attenuation across hops (the scope semantics A2A/Transaction-Tokens omit); inbound payloads tainted. *(ASI07)*
 
 > **Every one of the ten OWASP ASI risks now has a deterministic shipped mechanism (all ✓).** 143 tests passing, 1 skipped (Docker).
 
@@ -90,8 +91,10 @@ Deterministic anomaly detection + circuit breaker ship (`capguard.monitor`). Nex
 - LangGraph node/tool wrappers, CrewAI tool wrapper, OpenAI Agents SDK tool shim, LlamaIndex — each routing through the runtime with zero ceremony.
 - A Cedar/OPA predicate backend so teams can bring their existing policy engine and use CapGuard purely as the enforcement point.
 
-### Inter-agent (A2A) security *(ASI07)*
-- Signed inter-agent messages, identity propagation across hops, and capability attenuation along delegation chains.
+### Inter-agent (A2A) security *(ASI07)* — core shipped
+Signed messages + per-message capability attenuation ship (`capguard.a2a`). Next:
+native A2A AgentCard verification, an A2A transport adapter that routes envelopes
+through the runtime automatically, and full multi-hop delegation-chain propagation.
 
 ### Control plane (commercial)
 - Hosted multi-tenant policy management, central tamper-evident audit, dashboards, and replay/digital-twin testing for cascading-failure analysis.
