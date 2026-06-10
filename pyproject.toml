@@ -37,13 +37,17 @@ yaml = ["pyyaml>=6.0"]
 agentdojo = ["agentdojo>=0.1"]
 # docs site
 docs = ["mkdocs-material>=9.5"]
-dev = ["pytest>=8.2", "hypothesis>=6.0", "ruff>=0.5", "build>=1.2", "pyyaml>=6.0"]
+# hosted control plane (FastAPI service + dashboard)
+cloud = ["fastapi>=0.110", "uvicorn>=0.29"]
+dev = ["pytest>=8.2", "hypothesis>=6.0", "ruff>=0.5", "build>=1.2", "pyyaml>=6.0",
+       "fastapi>=0.110", "httpx>=0.27"]
 
 [project.scripts]
 capguard = "capguard.cli:main"
 capguard-bench = "capguard.bench.run_bench:main"
 capguard-agentdojo = "capguard.bench.run_agentdojo:main"
 capguard-live-agentdojo = "capguard.bench.run_live_agentdojo:main"
+capguard-cloud = "capguard_cloud.app:main"
 
 [project.urls]
 Homepage = "https://github.com/harsha-mangena/capguard"
