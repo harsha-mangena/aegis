@@ -42,13 +42,14 @@ Legend: ✅ done · 🔜 next · 🔭 later · status against the 2026 OWASP Top
 
 ## 🔜 Next (target: v0.1)
 
-### 1. Live-LLM AgentDojo (build on the shipped deterministic adapter)
-The deterministic ground-truth replay ships (`capguard.bench.run_agentdojo`,
-ASR 0% @ 100% utility on all four suites). Next:
-- Drive `agentdojo.agent_pipeline` with a real model (API key) through the same
-  enforcement loop; publish end-to-end ASR with CapGuard as the action backstop.
-- Auto-assign provenance from the tracker during the live run (instead of from
-  the known ground-truth source), and add ASB / InjecAgent / AgentDyn.
+### 1. Live-LLM AgentDojo — integration shipped; numbers need a model key
+The guarded runtime ships (`capguard.bench.live_agentdojo.GuardedFunctionsRuntime`):
+it routes **every tool call a live model emits** through CapGuard and derives
+provenance from the source boundary (not ground truth). Validated against real
+AgentDojo environments in `tests/test_live_agentdojo.py` (no key). Deterministic
+replay also ships (`run_agentdojo`, ASR 0% @ 100% utility). Next:
+- Run `run_live` with GPT-4o / Claude (API key) and publish end-to-end ASR/utility.
+- Add ASB / InjecAgent / AgentDyn behind the same `Scenario`/runtime interface.
 - Citable comparison table vs Progent / CaMeL / LlamaFirewall / AgentArmor.
 
 ### 2. Ed25519/SPIFFE identity in production

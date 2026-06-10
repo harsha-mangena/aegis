@@ -25,6 +25,10 @@ Benign user-task arguments originate from the trusted user prompt; injection
 arguments originate from untrusted environment/injection content. In a live run
 the provenance tracker assigns those labels automatically from where the data
 entered; here we assign them from the known source of each ground-truth call.
+
+For end-to-end numbers with a *real model in the loop* (no ground-truth replay),
+see ``live_agentdojo.py``: it guards every tool call a live LLM emits and derives
+provenance purely from the source boundary.
 """
 
 from __future__ import annotations

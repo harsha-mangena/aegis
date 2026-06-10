@@ -15,11 +15,11 @@ pip install capguard
 
 CapGuard is an embeddable Python SDK that makes any agent stack (LangGraph, CrewAI, AutoGen, OpenAI Agents, custom loops, or raw MCP) safe by default. It is **not** a prompt classifier and **not** a guardrail that tries to guess intent. It is a deterministic enforcement runtime: it decides — from capabilities, policy, and data provenance — whether a concrete tool call is allowed, denied, or needs human approval, and it backs that decision with hard isolation and a tamper-evident audit trail.
 
-**Status:** active development. Core is implemented and tested. **206 tests passing** (1 skipped: Docker backend); deterministic security benchmark at **0% attack-success rate / 100% utility / ~0.04 ms per-call overhead**. On the **real AgentDojo benchmark** (97 user + 35 injection tasks across all four suites), one general provenance profile holds **ASR 0.0% at 100% utility** under deterministic ground-truth replay. **All ten OWASP ASI risks now carry a shipped mechanism — every row is ✓.**
+**Status:** active development. Core is implemented and tested. **211 tests passing** (1 skipped: Docker backend); deterministic security benchmark at **0% attack-success rate / 100% utility / ~0.04 ms per-call overhead**. On the **real AgentDojo benchmark** (97 user + 35 injection tasks across all four suites), one general provenance profile holds **ASR 0.0% at 100% utility** under deterministic ground-truth replay. **All ten OWASP ASI risks now carry a shipped mechanism — every row is ✓.**
 
 ```bash
 pip install capguard              # or, from source: pip install -e ".[dev,yaml]"
-pytest -q                         # 206 passed, 1 skipped
+pytest -q                         # 211 passed, 1 skipped
 python examples/demo_poison_strip.py   # 60-second demo: poisoned MCP tool stripped + guarded transfer
 
 capguard bench                       # scripted security benchmark (exit non-zero on regression)
@@ -193,7 +193,7 @@ capguard/
   mcp_http.py      Streamable-HTTP MCP transport: guard remote servers + serve the proxy over HTTP
   mcp_auth.py      OAuth 2.1 resource-server auth (bearer/JWT verify, RFC 9728 PRM, RFC 8707 audience)
   sandbox.py       execution backends (subprocess / docker / deny) + tool factories
-  bench/           scripted security benchmark + real AgentDojo adapter + CI gate
+  bench/           scripted benchmark + real-AgentDojo replay + live-LLM integration (guards every model call) + CI gate
 tests/             206 tests (provenance, identity, a2a, adapters, properties, AgentDojo, monitor, budget, taskscope, memory, packs, http, auth, detectors, audit-graph, cli, …)
 examples/          runnable MCP server + guarded proxy launcher
 docs/              strategy memo, enhancement plan, benchmark results

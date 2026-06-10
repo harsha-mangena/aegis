@@ -43,6 +43,7 @@ dev = ["pytest>=8.2", "hypothesis>=6.0", "ruff>=0.5", "build>=1.2", "pyyaml>=6.0
 capguard = "capguard.cli:main"
 capguard-bench = "capguard.bench.run_bench:main"
 capguard-agentdojo = "capguard.bench.run_agentdojo:main"
+capguard-live-agentdojo = "capguard.bench.run_live_agentdojo:main"
 
 [project.urls]
 Homepage = "https://github.com/harsha-mangena/capguard"
