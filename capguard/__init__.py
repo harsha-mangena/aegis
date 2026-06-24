@@ -336,6 +336,21 @@ __all__ += [
     "verify_file",
 ]
 
+# Signed policy push (cloud -> guard)
+from .policy_sync import (  # noqa: E402
+    PolicyClient,
+    PolicySyncError,
+    SignedPack,
+    sign_pack,
+)
+
+__all__ += [
+    "PolicyClient",
+    "PolicySyncError",
+    "SignedPack",
+    "sign_pack",
+]
+
 # Sandboxed execution (ASI05)
 from .sandbox import (  # noqa: E402
     DenyBackend,

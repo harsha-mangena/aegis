@@ -33,9 +33,14 @@ ASI_COVERAGE = [
 
 def create_app(store: Optional[CloudStore] = None,
                api_keys: Optional[Dict[str, str]] = None,
-               title: str = "CapGuard Control Plane"):
-    """Build the FastAPI app. ``api_keys`` maps bearer token -> tenant id."""
-    from fastapi import Depends, FastAPI, Header, HTTPException
+               title: str = "CapGuard Control Plane",
+               policy_signer=None):
+    """Build the FastAPI app. ``api_keys`` maps bearer token -> tenant id.
+
+    ``policy_signer`` (a ``capguard.identity.Signer``) enables signed policy push:
+    guards pull ``GET /v1/policy`` and verify the signature locally before applying.
+    """
+    from fastapi import Body, Depends, FastAPI, Header, HTTPException
     from fastapi.responses import HTMLResponse
 
     store = store or CloudStore()
@@ -68,6 +73,20 @@ def create_app(store: Optional[CloudStore] = None,
     @app.get("/v1/flows")
     def flows(tenant_id: str = Depends(tenant)):
         return store.flows(tenant_id)
+
+    @app.put("/v1/policy")
+    def set_policy(pack: dict = Body(...), tenant_id: str = Depends(tenant)):
+        if policy_signer is None:
+            raise HTTPException(status_code=501, detail="policy signing not configured")
+        sp = store.set_policy(tenant_id, pack, policy_signer)
+        return {"version": sp.version, "alg": sp.alg}
+
+    @app.get("/v1/policy")
+    def get_policy(tenant_id: str = Depends(tenant)):
+        sp = store.get_policy(tenant_id)
+        if sp is None:
+            raise HTTPException(status_code=404, detail="no policy set for this tenant")
+        return sp.to_dict()
 
     @app.get("/v1/coverage")
     def coverage():

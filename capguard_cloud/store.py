@@ -14,11 +14,14 @@ from typing import Any, Dict, List
 
 from capguard.audit import AuditEvent, verify_chain
 from capguard.audit_graph import _DEFAULT_SINKS, build_flow_graph, tainted_sink_calls
+from capguard.identity import Signer
+from capguard.policy_sync import SignedPack, sign_pack
 
 
 class CloudStore:
     def __init__(self) -> None:
         self._events: Dict[str, List[AuditEvent]] = {}
+        self._policy: Dict[str, SignedPack] = {}
         self._lock = threading.Lock()
 
     def ingest(self, tenant: str, event: AuditEvent) -> int:
@@ -55,6 +58,17 @@ class CloudStore:
             "tools": sorted({e.tool_name for e in evs}),
             "chain_ok": self.chain_ok(tenant),
         }
+
+    # -- policy management (signed, versioned) ----------------------------- #
+    def set_policy(self, tenant: str, pack: Dict[str, Any], signer: Signer) -> SignedPack:
+        with self._lock:
+            version = (self._policy[tenant].version + 1) if tenant in self._policy else 1
+            sp = sign_pack(signer, pack, version)
+            self._policy[tenant] = sp
+            return sp
+
+    def get_policy(self, tenant: str) -> "SignedPack | None":
+        return self._policy.get(tenant)
 
     def flows(self, tenant: str) -> Dict[str, Any]:
         graph = build_flow_graph(self._events_for(tenant))
