@@ -273,6 +273,47 @@ BUILTIN_PACKS: Dict[str, Dict[str, Any]] = {
              "reason": "secret + attacker-influenced data in the same call"},
         ],
     },
+    "healthcare": {
+        "name": "healthcare",
+        "description": "PHI protection: no PHI/secret to outbound sinks, no injected data to sinks, record deletion needs review.",
+        "rules": [
+            {"name": "phi-to-sink", "tools": ["send_*", "post_*", "export_*", "share_*", "upload_*"],
+             "when": {"flow": "any_secret"}, "effect": "deny",
+             "reason": "PHI must not leave via an outbound sink"},
+            {"name": "untrusted-to-sink", "tools": ["send_*", "post_*", "export_*", "share_*"],
+             "when": {"flow": "any_untrusted"}, "effect": "deny",
+             "reason": "sink fed by untrusted/injected data"},
+            {"name": "record-deletion", "tools": ["delete_*", "purge_*"],
+             "effect": "require_approval", "reason": "destructive record change needs human review"},
+        ],
+    },
+    "coding-agent": {
+        "name": "coding-agent",
+        "description": "Coding agent: contain shell/exec, block secret exfiltration and destructive commands.",
+        "rules": [
+            {"name": "untrusted-shell", "tools": ["run_shell", "shell", "exec", "run_python", "bash"],
+             "when": {"flow": "any_untrusted"}, "effect": "deny",
+             "reason": "command derived from untrusted/injected data"},
+            {"name": "destructive-shell", "tools": ["run_shell", "shell", "bash"],
+             "when": {"arg": "cmd", "op": "matches", "value": "*rm -rf*"},
+             "effect": "require_approval", "reason": "destructive shell command"},
+            {"name": "secret-egress", "tools": ["fetch", "http_*", "post_*", "send_*", "push", "upload_*"],
+             "when": {"flow": "any_secret"}, "effect": "deny", "reason": "secret must not be exfiltrated"},
+        ],
+    },
+    "browser-agent": {
+        "name": "browser-agent",
+        "description": "Browser agent: web content is untrusted; block injected actions and exfil; gate purchases.",
+        "rules": [
+            {"name": "untrusted-action", "tools": ["post_*", "submit_*", "purchase", "checkout", "send_*", "click_*"],
+             "when": {"flow": "any_untrusted"}, "effect": "deny",
+             "reason": "action driven by untrusted web content"},
+            {"name": "secret-to-web", "tools": ["post_*", "submit_*", "send_*", "fetch", "navigate"],
+             "when": {"flow": "any_secret"}, "effect": "deny", "reason": "secret must not reach the web"},
+            {"name": "purchase-approval", "tools": ["purchase", "checkout", "place_order"],
+             "effect": "require_approval", "reason": "financial action needs human review"},
+        ],
+    },
 }
 
 

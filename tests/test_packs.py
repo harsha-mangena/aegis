@@ -73,10 +73,31 @@ def test_unknown_op_and_effect_raise():
 # --------------------------------------------------------------------------- #
 def test_builtin_packs_exist_and_compile():
     names = builtin_pack_names()
-    assert {"owasp-baseline", "finance", "data-exfil"}.issubset(set(names))
+    assert {"owasp-baseline", "finance", "data-exfil",
+            "healthcare", "coding-agent", "browser-agent"}.issubset(set(names))
     for n in names:
         eng = compile_pack(n)
         assert eng.rules
+
+
+def test_domain_packs_enforce():
+    from capguard import SECRET, Label, Trust
+
+    # coding-agent: a destructive shell command needs approval
+    eng = compile_pack("coding-agent")
+    d = eng.evaluate(_ctx("run_shell", {"cmd": "rm -rf /"}))
+    assert d.effect is Effect.REQUIRE_APPROVAL
+
+    # healthcare: PHI (secret-labeled) to an outbound sink is denied
+    eng = compile_pack("healthcare")
+    d = eng.evaluate(_ctx("send_email", {"body": "x"}, labels={"body": SECRET}))
+    assert d.effect is Effect.DENY
+
+    # browser-agent: an injected (untrusted) web action is denied
+    eng = compile_pack("browser-agent")
+    d = eng.evaluate(_ctx("submit_form", {"q": "x"},
+                          labels={"q": Label(trust=Trust.UNTRUSTED_WEB)}))
+    assert d.effect is Effect.DENY
 
 
 def test_finance_pack_end_to_end():

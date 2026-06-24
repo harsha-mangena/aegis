@@ -79,7 +79,18 @@ def _build_proxy_from_config(cfg: Dict[str, Any]):
     caps = [_compile_capability(c) for c in agent_cfg.get("capabilities", [])]
     agent = AgentIdentity(id=agent_cfg.get("id", "agent"), roles=agent_cfg.get("roles", []),
                           allowed_capabilities=caps)
-    guard = MCPGuard(engine=engine)
+
+    # optional: stream the audit trail to a control plane (fail-open, observe-only)
+    audit_sink = None
+    cloud = cfg.get("cloud")
+    if cloud and cloud.get("url"):
+        from .audit import HashChainedSink, HttpSink, MultiSink
+        sinks = [HttpSink(cloud["url"], token=cloud.get("token"))]
+        if cloud.get("local_log"):
+            sinks.insert(0, HashChainedSink(cloud["local_log"]))
+        audit_sink = MultiSink(*sinks) if len(sinks) > 1 else sinks[0]
+
+    guard = MCPGuard(engine=engine, audit_sink=audit_sink)
 
     downstreams = []
     for d in cfg.get("downstreams", []):
@@ -232,6 +243,45 @@ def _cmd_proxy(args) -> int:
 # --------------------------------------------------------------------------- #
 # parser
 # --------------------------------------------------------------------------- #
+_INIT_TEMPLATE: Dict[str, Any] = {
+    "transport": "stdio",
+    "pack": "owasp-baseline",
+    "agent": {
+        "id": "my-agent",
+        "capabilities": [
+            {"type": "custom", "name": "example_tool"},
+            {"type": "network_http", "domains": ["api.example.com"]},
+        ],
+    },
+    "downstreams": [{"server_id": "local", "stdio": ["python", "your_mcp_server.py"]}],
+}
+
+
+def _cmd_init(args) -> int:
+    cfg = json.loads(json.dumps(_INIT_TEMPLATE))  # deep copy
+    if args.http:
+        cfg["transport"] = "http"
+        cfg["http"] = {"host": "127.0.0.1", "port": 8080}
+        cfg["auth"] = {
+            "type": "jwt-hs256", "secret": "CHANGE-ME",
+            "audience": "https://your-guard.example/mcp",
+            "required_scopes": ["mcp:call"],
+            "authorization_servers": ["https://your-idp.example"],
+        }
+    if args.cloud:
+        cfg["cloud"] = {"url": args.cloud, "token": "YOUR_TENANT_KEY",
+                        "local_log": "capguard_audit.jsonl"}
+    out = Path(args.out)
+    if out.exists() and not args.force:
+        print(f"refusing to overwrite {out} (use --force)", file=sys.stderr)
+        return 1
+    out.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {out}\n  1. edit the downstreams / agent capabilities\n"
+          f"  2. capguard proxy {out} --check     # connect & list the post-guard tools\n"
+          f"  3. capguard proxy {out}             # serve")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="capguard",
                                 description="Deterministic security runtime for AI agents.")
@@ -264,6 +314,13 @@ def build_parser() -> argparse.ArgumentParser:
     ms = sub.add_parser("mcp-scan", help="scan MCP tool definitions for poisoning")
     ms.add_argument("path", help="JSON/YAML file: a list of tool defs or {\"tools\": [...]}")
     ms.set_defaults(func=_cmd_mcp_scan)
+
+    ini = sub.add_parser("init", help="scaffold a guarded-proxy config (stdio/http, optional cloud)")
+    ini.add_argument("--out", default="capguard.proxy.json")
+    ini.add_argument("--http", action="store_true", help="serve over HTTP + OAuth instead of stdio")
+    ini.add_argument("--cloud", default="", help="control-plane audit ingest URL to stream to")
+    ini.add_argument("--force", action="store_true", help="overwrite an existing file")
+    ini.set_defaults(func=_cmd_init)
 
     px = sub.add_parser("proxy", help="run the guarded MCP proxy from a config")
     px.add_argument("config", help="JSON/YAML proxy config")
