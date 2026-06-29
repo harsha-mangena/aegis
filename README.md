@@ -1,4 +1,4 @@
-<![CDATA[<p align="center">
+<p align="center">
   <img src="docs/logo-animated.svg" width="280" alt="Aegisguard logo" />
 </p>
 
@@ -307,4 +307,3 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Security bugs: see [SECURITY.md](SECURIT
 ## License
 
 Apache 2.0. See [LICENSE](LICENSE).
-]]>

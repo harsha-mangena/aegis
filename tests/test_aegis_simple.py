@@ -5,8 +5,7 @@ from __future__ import annotations
 import pytest
 
 # Reset module-level singleton before each test
-import aegis
-from aegis import Aegis, configure, guard, observe, reset
+from aegis import Aegis, configure, guard, reset
 
 
 @pytest.fixture(autouse=True)

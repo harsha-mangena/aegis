@@ -9,7 +9,7 @@ RAG pipelines, voice agents — anything callable.
 # 1. Zero-config — just import and decorate
 # ============================================================
 
-from aegis import guard
+from aegis import guard  # noqa: I001
 
 @guard(network=True)
 def search_web(url: str) -> str:
@@ -31,7 +31,7 @@ def run_command(cmd: str) -> str:
 # 2. Configured — scoped domains, audit, packs
 # ============================================================
 
-from aegis import Aegis
+from aegis import Aegis  # noqa: E402
 
 ag = Aegis(
     pack="owasp-baseline",   # built-in security profile

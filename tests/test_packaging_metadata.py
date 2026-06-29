@@ -32,7 +32,7 @@ def test_packages_include_aegis_and_capguard():
 
 
 def test_aegis_public_api_importable():
-    from aegis import Aegis, guard, configure, observe, reset
+    from aegis import Aegis, configure, guard, observe, reset
 
     assert callable(guard)
     assert callable(configure)

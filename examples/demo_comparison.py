@@ -15,9 +15,6 @@ Usage:
 from __future__ import annotations
 
 import json
-import os
-import sys
-import traceback
 
 from openai import OpenAI
 
@@ -121,7 +118,7 @@ RAW_TOOLS = {
 # Protected tools — guarded by Aegis
 # ================================================================== #
 
-from aegis import Aegis
+from aegis import Aegis  # noqa: E402
 
 ag = Aegis(
     pack="owasp-baseline",
@@ -306,10 +303,6 @@ def main():
         raw_status = "BLOCKED" if r["raw_blocked"] else "EXECUTED"
         guard_status = "BLOCKED" if r["guarded_blocked"] else "EXECUTED"
         expected = "BLOCK" if r["expect_blocked"] else "ALLOW"
-
-        # Color coding via symbols
-        raw_icon = "!!" if not r["raw_blocked"] and r["expect_blocked"] else "ok"
-        guard_icon = "ok" if r["guarded_blocked"] == r["expect_blocked"] else "!!"
 
         print(
             f"  {r['scenario']:<30} "

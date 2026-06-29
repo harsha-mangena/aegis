@@ -12,13 +12,13 @@ Usage:
 
 from __future__ import annotations
 
-import sys
 import os
+import sys
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from aegis import Aegis, configure, guard, reset
+from aegis import Aegis, guard, reset  # noqa: E402
 
 
 def section(title: str):
@@ -229,14 +229,14 @@ def main():
         print(f"  PASS  Web source tainted as UNTRUSTED_WEB (trust={label_web.trust})")
         passed += 1
     else:
-        print(f"  FAIL  Web source not properly tainted")
+        print("  FAIL  Web source not properly tainted")
         failed += 1
 
     if label_secret and label_secret.confidentiality.value >= 2:
         print(f"  PASS  Secret source marked as SECRET (conf={label_secret.confidentiality})")
         passed += 1
     else:
-        print(f"  FAIL  Secret source not properly labeled")
+        print("  FAIL  Secret source not properly labeled")
         failed += 1
 
     # ============================================================ #
@@ -247,7 +247,7 @@ def main():
     for pack_name in packs:
         total += 1
         try:
-            ag_pack = Aegis(pack=pack_name)
+            Aegis(pack=pack_name)
             print(f"  PASS  Pack '{pack_name}' loaded successfully")
             passed += 1
         except Exception as e:
@@ -280,14 +280,14 @@ def main():
         print(f"  PASS  Successful execution recorded ({len(success_events)} events)")
         passed += 1
     else:
-        print(f"  FAIL  No successful execution events recorded")
+        print("  FAIL  No successful execution events recorded")
         failed += 1
 
     if len(error_events) >= 1:
         print(f"  PASS  Blocked execution recorded ({len(error_events)} events)")
         passed += 1
     else:
-        print(f"  FAIL  No blocked events recorded")
+        print("  FAIL  No blocked events recorded")
         failed += 1
 
     # ============================================================ #
