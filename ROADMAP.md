@@ -1,4 +1,4 @@
-# CapGuard Roadmap
+# Aegisguard Roadmap
 
 This is the forward plan. It builds on the shipped core (capabilities, policy DSL, provenance, approvals, MCP guard + proxy, sandbox, benchmark). Items are ordered by leverage; each is independently shippable.
 
@@ -72,7 +72,7 @@ Next: more packs (healthcare, coding-agent, browser-agent), a `capguard packs li
 CLI, and signed/pinned pack distribution.
 
 ### 5. Packaging & docs
-- Publish the renamed PyPI distribution, `capguard-runtime` (imports and CLI remain `capguard`), via Trusted Publishing.
+- Publish `aegisguard` to PyPI via Trusted Publishing (`pip install aegisguard` → `from aegis import guard`).
 - Quickstart + recipe docs per framework (LangGraph, CrewAI, OpenAI Agents, raw MCP).
 
 ---

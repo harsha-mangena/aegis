@@ -4,8 +4,6 @@ __pycache__/
 *.egg-info/
 build/
 dist/
-# build staging / artifacts
-capguard-*/
 *.whl
 *.tar.gz
 .tmp-*
@@ -14,7 +12,9 @@ site/
 venv/
 *.jsonl
 bench_results.json
-proxy_audit.jsonl
 keys/
 *.pem
 .DS_Store
+.hypothesis/
+.ruff_cache/
+cleanup.sh

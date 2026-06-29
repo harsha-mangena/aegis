@@ -142,16 +142,22 @@ __all__ += [
 
 # Framework adapters (embed under LangGraph / OpenAI Agents / CrewAI / raw)
 from .adapters import (  # noqa: E402
+    AgentGuard,
     CapGuard,
+    GuardedAgent,
     GuardedTool,
+    guard_agent,
     to_crewai,
     to_langchain,
     to_openai_agents,
 )
 
 __all__ += [
+    "AgentGuard",
     "CapGuard",
+    "GuardedAgent",
     "GuardedTool",
+    "guard_agent",
     "to_langchain",
     "to_openai_agents",
     "to_crewai",

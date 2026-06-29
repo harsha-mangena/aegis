@@ -1,0 +1,221 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 480" width="400" height="480">
+  <defs>
+    <!-- Shield gradient -->
+    <linearGradient id="shieldGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#243447"/>
+      <stop offset="100%" stop-color="#111d2b"/>
+    </linearGradient>
+    <!-- Glow filter for nodes -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Stronger glow for traces -->
+    <filter id="traceGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    /* Shield draw animation */
+    @keyframes drawShield {
+      0% { stroke-dashoffset: 1200; fill-opacity: 0; }
+      60% { stroke-dashoffset: 0; fill-opacity: 0; }
+      80% { fill-opacity: 1; }
+      100% { stroke-dashoffset: 0; fill-opacity: 1; }
+    }
+    /* Circuit trace draw - staggered */
+    @keyframes drawTrace {
+      0%, 25% { stroke-dashoffset: 500; opacity: 0; }
+      30% { opacity: 1; }
+      80% { stroke-dashoffset: 0; }
+      100% { stroke-dashoffset: 0; opacity: 1; }
+    }
+    @keyframes drawTrace2 {
+      0%, 35% { stroke-dashoffset: 500; opacity: 0; }
+      40% { opacity: 1; }
+      85% { stroke-dashoffset: 0; }
+      100% { stroke-dashoffset: 0; opacity: 1; }
+    }
+    @keyframes drawTrace3 {
+      0%, 45% { stroke-dashoffset: 500; opacity: 0; }
+      50% { opacity: 1; }
+      90% { stroke-dashoffset: 0; }
+      100% { stroke-dashoffset: 0; opacity: 1; }
+    }
+    /* Node appear + pulse */
+    @keyframes nodeAppear {
+      0%, 55% { r: 0; opacity: 0; }
+      65% { r: 6; opacity: 1; }
+      70% { r: 4; opacity: 0.8; }
+      100% { r: 4; opacity: 0.8; }
+    }
+    @keyframes nodeAppear2 {
+      0%, 65% { r: 0; opacity: 0; }
+      75% { r: 6; opacity: 1; }
+      80% { r: 4; opacity: 0.8; }
+      100% { r: 4; opacity: 0.8; }
+    }
+    @keyframes nodeAppear3 {
+      0%, 75% { r: 0; opacity: 0; }
+      85% { r: 6; opacity: 1; }
+      90% { r: 4; opacity: 0.8; }
+      100% { r: 4; opacity: 0.8; }
+    }
+    /* Breathing pulse after initial animation */
+    @keyframes breathe {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+
+    .shield {
+      stroke-dasharray: 1200;
+      animation: drawShield 2.5s ease-out forwards;
+    }
+    .trace-1 {
+      stroke-dasharray: 500;
+      animation: drawTrace 3s ease-out forwards, breathe 3s ease-in-out 3.5s infinite;
+    }
+    .trace-2 {
+      stroke-dasharray: 500;
+      animation: drawTrace2 3s ease-out forwards, breathe 3s ease-in-out 4s infinite;
+    }
+    .trace-3 {
+      stroke-dasharray: 500;
+      animation: drawTrace3 3s ease-out forwards, breathe 3s ease-in-out 4.5s infinite;
+    }
+    .node-1 {
+      animation: nodeAppear 3s ease-out forwards, breathe 3s ease-in-out 3.5s infinite;
+    }
+    .node-2 {
+      animation: nodeAppear2 3s ease-out forwards, breathe 3s ease-in-out 4s infinite;
+    }
+    .node-3 {
+      animation: nodeAppear3 3s ease-out forwards, breathe 3s ease-in-out 4.5s infinite;
+    }
+  </style>
+
+  <!-- Shield body -->
+  <path class="shield"
+    d="M200 30 L350 110 L350 260 Q350 360 200 450 Q50 360 50 260 L50 110 Z"
+    fill="url(#shieldGrad)" fill-opacity="0"
+    stroke="#2a4a6b" stroke-width="4" stroke-linejoin="round"/>
+
+  <!-- Shield inner border -->
+  <path class="shield"
+    d="M200 55 L330 125 L330 255 Q330 340 200 420 Q70 340 70 255 L70 125 Z"
+    fill="none" stroke="#1a3550" stroke-width="1.5" stroke-linejoin="round"
+    style="animation-delay: 0.3s"/>
+
+  <!-- === CIRCUIT TRACES === -->
+  <g filter="url(#traceGlow)">
+
+    <!-- Center vertical spine -->
+    <line x1="200" y1="150" x2="200" y2="320"
+      stroke="#00d4aa" stroke-width="2.5" class="trace-1"/>
+
+    <!-- Left branch - upper -->
+    <polyline points="200,180 160,180 130,150 100,150"
+      fill="none" stroke="#00d4aa" stroke-width="2.5" class="trace-1"/>
+
+    <!-- Right branch - upper -->
+    <polyline points="200,180 240,180 270,150 300,150"
+      fill="none" stroke="#00d4aa" stroke-width="2.5" class="trace-1"/>
+
+    <!-- Left branch - middle -->
+    <polyline points="200,220 150,220 120,250 90,250"
+      fill="none" stroke="#00d4aa" stroke-width="2.5" class="trace-2"/>
+
+    <!-- Right branch - middle -->
+    <polyline points="200,220 250,220 280,250 310,250"
+      fill="none" stroke="#00d4aa" stroke-width="2.5" class="trace-2"/>
+
+    <!-- Left branch - lower -->
+    <polyline points="200,270 160,270 130,300 110,300"
+      fill="none" stroke="#00d4aa" stroke-width="2.5" class="trace-3"/>
+
+    <!-- Right branch - lower -->
+    <polyline points="200,270 240,270 270,300 290,300"
+      fill="none" stroke="#00d4aa" stroke-width="2.5" class="trace-3"/>
+
+    <!-- Left diagonal upper spur -->
+    <polyline points="130,150 130,130"
+      fill="none" stroke="#00d4aa" stroke-width="2.5" class="trace-2"/>
+
+    <!-- Right diagonal upper spur -->
+    <polyline points="270,150 270,130"
+      fill="none" stroke="#00d4aa" stroke-width="2.5" class="trace-2"/>
+
+    <!-- Left sub-branch -->
+    <polyline points="150,220 150,195"
+      fill="none" stroke="#00d4aa" stroke-width="2.5" class="trace-3"/>
+
+    <!-- Right sub-branch -->
+    <polyline points="250,220 250,195"
+      fill="none" stroke="#00d4aa" stroke-width="2.5" class="trace-3"/>
+
+    <!-- Bottom V -->
+    <polyline points="200,320 170,350 150,350"
+      fill="none" stroke="#00d4aa" stroke-width="2.5" class="trace-3"/>
+    <polyline points="200,320 230,350 250,350"
+      fill="none" stroke="#00d4aa" stroke-width="2.5" class="trace-3"/>
+
+  </g>
+
+  <!-- === CIRCUIT NODES === -->
+  <g filter="url(#glow)">
+    <!-- Center spine nodes -->
+    <circle cx="200" cy="150" r="0" fill="#00d4aa" class="node-1"/>
+    <circle cx="200" cy="180" r="0" fill="#00d4aa" class="node-1"/>
+    <circle cx="200" cy="220" r="0" fill="#00d4aa" class="node-2"/>
+    <circle cx="200" cy="270" r="0" fill="#00d4aa" class="node-2"/>
+    <circle cx="200" cy="320" r="0" fill="#00d4aa" class="node-3"/>
+
+    <!-- Left nodes -->
+    <circle cx="100" cy="150" r="0" fill="#00d4aa" class="node-1"/>
+    <circle cx="130" cy="130" r="0" fill="#00d4aa" class="node-2"/>
+    <circle cx="90" cy="250" r="0" fill="#00d4aa" class="node-2"/>
+    <circle cx="150" cy="195" r="0" fill="#00d4aa" class="node-3"/>
+    <circle cx="110" cy="300" r="0" fill="#00d4aa" class="node-3"/>
+    <circle cx="150" cy="350" r="0" fill="#00d4aa" class="node-3"/>
+
+    <!-- Right nodes (mirror) -->
+    <circle cx="300" cy="150" r="0" fill="#00d4aa" class="node-1"/>
+    <circle cx="270" cy="130" r="0" fill="#00d4aa" class="node-2"/>
+    <circle cx="310" cy="250" r="0" fill="#00d4aa" class="node-2"/>
+    <circle cx="250" cy="195" r="0" fill="#00d4aa" class="node-3"/>
+    <circle cx="290" cy="300" r="0" fill="#00d4aa" class="node-3"/>
+    <circle cx="250" cy="350" r="0" fill="#00d4aa" class="node-3"/>
+
+    <!-- Junction nodes (where branches meet spine) -->
+    <circle cx="160" cy="180" r="0" fill="#00ffcc" class="node-1"/>
+    <circle cx="240" cy="180" r="0" fill="#00ffcc" class="node-1"/>
+    <circle cx="150" cy="220" r="0" fill="#00ffcc" class="node-2"/>
+    <circle cx="250" cy="220" r="0" fill="#00ffcc" class="node-2"/>
+    <circle cx="160" cy="270" r="0" fill="#00ffcc" class="node-3"/>
+    <circle cx="240" cy="270" r="0" fill="#00ffcc" class="node-3"/>
+
+    <!-- Bend nodes -->
+    <circle cx="130" cy="150" r="0" fill="#00d4aa" class="node-1"/>
+    <circle cx="270" cy="150" r="0" fill="#00d4aa" class="node-1"/>
+    <circle cx="120" cy="250" r="0" fill="#00d4aa" class="node-2"/>
+    <circle cx="280" cy="250" r="0" fill="#00d4aa" class="node-2"/>
+    <circle cx="130" cy="300" r="0" fill="#00d4aa" class="node-3"/>
+    <circle cx="270" cy="300" r="0" fill="#00d4aa" class="node-3"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="200" y="470" text-anchor="middle" font-family="'SF Mono', 'JetBrains Mono', 'Fira Code', monospace"
+    font-size="10" letter-spacing="3" fill="#4a6a8a" opacity="0"
+    style="animation: drawTrace 3s ease-out forwards">
+    AEGISGUARD
+  </text>
+
+</svg>

@@ -1,6 +1,6 @@
 # Security Policy
 
-CapGuard is a security tool, so we take vulnerabilities in it seriously.
+Aegisguard is a security tool, so we take vulnerabilities in it seriously.
 
 ## Reporting a vulnerability
 

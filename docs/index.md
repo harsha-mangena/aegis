@@ -16,7 +16,8 @@ pip install capguard-runtime
 ```
 
 The PyPI distribution is `capguard-runtime`; imports and the CLI use
-`capguard`.
+`capguard`. The `agentguard` import alias is included for the simplified
+`AgentGuard` facade.
 
 ## Why it exists
 
@@ -33,7 +34,7 @@ capability, policy, or provenance — not because a classifier flagged it.
 
 ## Numbers
 
-- **272 test functions**; optional integration tests self-skip when their
+- **287 test functions**; optional integration tests self-skip when their
   dependencies or Docker are unavailable.
 - Deterministic security benchmark: **0% attack-success rate / 100% utility /
   ~0.04 ms per call**.

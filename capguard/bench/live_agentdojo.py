@@ -130,8 +130,15 @@ def available() -> bool:
         return False
 
 
-def run_live(suite_name: str, pipeline, *, attack=None, version: str = "v1.2.1",
-             user_task_ids: Optional[List[str]] = None) -> Dict[str, Any]:
+def run_live(
+    suite_name: str,
+    pipeline,
+    *,
+    attack=None,
+    version: str = "v1.2.1",
+    user_task_ids: Optional[List[str]] = None,
+    injection_task_ids: Optional[List[str]] = None,
+) -> Dict[str, Any]:
     """Run a real AgentDojo pipeline with CapGuard guarding every tool call.
 
     ``pipeline`` is an ``agentdojo.agent_pipeline.AgentPipeline`` (your model).
@@ -144,6 +151,7 @@ def run_live(suite_name: str, pipeline, *, attack=None, version: str = "v1.2.1",
     suite = get_suites(version)[suite_name]
     cls = make_guarded_runtime_class(suite_name)
     uids = user_task_ids or list(suite.user_tasks)
+    iids = injection_task_ids or list(suite.injection_tasks)
 
     util_pass = util_total = 0
     inj_success = inj_total = 0
@@ -153,7 +161,8 @@ def run_live(suite_name: str, pipeline, *, attack=None, version: str = "v1.2.1",
         util_total += 1
         util_pass += int(bool(ok))
         if attack is not None:
-            for it in suite.injection_tasks.values():
+            for iid in iids:
+                it = suite.injection_tasks[iid]
                 injections = attack.attack(ut, it) if hasattr(attack, "attack") else {}
                 _, inj_ok = suite.run_task_with_pipeline(pipeline, ut, it, injections, runtime_class=cls)
                 inj_total += 1

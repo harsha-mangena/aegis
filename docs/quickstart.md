@@ -5,59 +5,65 @@ pip install capguard-runtime
 ```
 
 The distribution is named `capguard-runtime` on PyPI; the Python package and CLI
-remain `capguard`.
+remain `capguard`. The `agentguard` import alias is available for the simplified
+`AgentGuard` facade.
 
-## 60 seconds: guard a tool call
+## 60 seconds: guard any agent's tools
 
 ```python
-from capguard import (
-    AgentIdentity, AgentRuntime, Capability, Severity, ToolRegistry,
-    PolicyEngine, Rule, Arg, tool_is, Effect,
-)
-from capguard.audit import HashChainedSink
+from agentguard import AgentGuard
 
-reg = ToolRegistry()
+guard = AgentGuard("support-agent")
 
-@reg.tool(capabilities=[Capability.custom("transfer")], severity=Severity.LOW)
-def transfer(amount: int, recipient: str) -> str:
-    return f"sent {amount} to {recipient}"
+@guard.tool(network=["api.example.com"])
+def search(url: str) -> str:
+    return http_get(url)
 
-# Restrict by use case: large transfers need a human.
-engine = PolicyEngine().add(
-    Rule("limit", trigger=tool_is("transfer"), when=Arg("amount") > 1000,
-         effect=Effect.REQUIRE_APPROVAL))
+search(url="https://api.example.com/docs")      # allowed
+search(url="https://evil.example/steal")        # denied
+```
 
-agent = AgentIdentity(id="fin-bot", allowed_capabilities=[Capability.custom("transfer")])
-rt = AgentRuntime(registry=reg, engine=engine,
-                  audit_sink=HashChainedSink("audit.jsonl"), default_agent=agent)
+`AgentGuard` creates the runtime, identity, provenance tracker, and default OWASP
+policy for you. Pass the guarded callables to whatever agent framework you use.
 
-rt.invoke_tool("transfer", amount=100,  recipient="alice")   # ok
-rt.invoke_tool("transfer", amount=9999, recipient="alice")   # ApprovalRequired
+```python
+agent = create_agent(model="gpt-4o", tools=guard.langchain_tools())
+```
+
+Or wrap an existing agent object:
+
+```python
+from agentguard import guard_agent
+
+secured = guard_agent(existing_agent, tools=[search], framework="langchain")
+agent = secured.bind()       # uses bind_tools(...) when the framework exposes it
 ```
 
 See the live demo:
 
 ```bash
 python -m capguard.cli version
+python examples/simple_agentguard.py    # guard tools for any agent/framework
 python examples/demo_poison_strip.py     # poisoned MCP tool stripped + guarded transfer
 ```
 
 ## Embed under your framework
 
 ```python
-from capguard import CapGuard, to_langchain
+from agentguard import AgentGuard
 
-guard = CapGuard(rt)
+guard = AgentGuard("research-agent")
 
-@guard.tool(name="search", capabilities=[Capability.network_http(domains=["api.corp.com"])])
+@guard.tool(network=["api.corp.com"])
 def search(url: str) -> str:
     ...
 
-lc_tool = to_langchain(search)      # native LangChain StructuredTool, still guarded
+lc_tool = search.as_langchain()      # native LangChain StructuredTool, still guarded
 ```
 
-`to_openai_agents(...)` and `to_crewai(...)` work the same way. CapGuard runs
-**underneath** your framework — bring your stack.
+`search.as_openai_agents()` and `search.as_crewai()` work the same way. CapGuard
+runs **underneath** your framework; the LLM provider can be OpenAI, Anthropic,
+Gemini, local models, or anything else because the action boundary is the same.
 
 ## Adopt a strong default in one line
 
@@ -69,10 +75,14 @@ engine = compile_pack("owasp-baseline")   # or "finance", "data-exfil"
 ## Stop a laundered injection with propagated provenance
 
 ```python
-from capguard import ProvenanceTracker
-rt = AgentRuntime(registry=reg, engine=engine, default_agent=agent,
-                  tracker=ProvenanceTracker())
+from agentguard import AgentGuard
 
-poisoned = rt.invoke_tool("web_fetch", url="https://evil.com")   # auto-labeled untrusted_web
-rt.invoke_tool("send_message", channel="#x", text=poisoned)      # DENIED — taint propagated, no tagging needed
+guard = AgentGuard("rag-agent")
+
+@guard.tool(name="send_message", capability="send_message")
+def send_message(channel: str, text: str) -> str:
+    return "sent"
+
+poisoned = guard.untrusted(retriever.invoke("invoice instructions"), source="rag")
+guard.invoke("send_message", channel="#x", text=poisoned)        # DENIED by default sink policy
 ```

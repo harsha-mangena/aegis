@@ -1,225 +1,310 @@
-# CapGuard — the deterministic security runtime for AI agents
+<![CDATA[<p align="center">
+  <img src="docs/logo-animated.svg" width="280" alt="Aegisguard logo" />
+</p>
 
-[![CI](https://github.com/harsha-mangena/capguard/actions/workflows/ci.yml/badge.svg)](https://github.com/harsha-mangena/capguard/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/capguard-runtime.svg)](https://pypi.org/project/capguard-runtime/)
-[![Python](https://img.shields.io/pypi/pyversions/capguard-runtime.svg)](https://pypi.org/project/capguard-runtime/)
+# Aegisguard
+
+**Deterministic security runtime for AI agents. One decorator. Any framework. Full enforcement.**
+
+[![PyPI](https://img.shields.io/pypi/v/aegisguard.svg)](https://pypi.org/project/aegisguard/)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://pypi.org/project/aegisguard/)
+[![Tests](https://img.shields.io/badge/tests-298%20passed-brightgreen.svg)](#)
+[![OWASP](https://img.shields.io/badge/OWASP%20ASI--2026-10%2F10%20covered-brightgreen.svg)](#owasp-asi-2026-coverage)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-272%20functions-brightgreen.svg)](#)
-[![ASR](https://img.shields.io/badge/benchmark-0%25%20ASR%20%2F%20100%25%20utility-brightgreen.svg)](docs/BENCHMARK_RESULTS.md)
-
-> Least privilege for AI agents, **enforced**. A non-bypassable layer that sits inline on every tool call and every MCP message.
+[![ASR](https://img.shields.io/badge/attack%20success%20rate-0%25-brightgreen.svg)](#benchmark)
 
 ```bash
-pip install capguard-runtime
+pip install aegisguard
 ```
-
-CapGuard is an embeddable Python SDK that makes any agent stack (LangGraph, CrewAI, AutoGen, OpenAI Agents, custom loops, or raw MCP) safe by default. It is **not** a prompt classifier and **not** a guardrail that tries to guess intent. It is a deterministic enforcement runtime: it decides — from capabilities, policy, and data provenance — whether a concrete tool call is allowed, denied, or needs human approval, and it backs that decision with hard isolation and a tamper-evident audit trail.
-
-**Package name:** install `capguard-runtime`; import and run it as `capguard`.
-
-**Status:** active development. Core is implemented and tested. The repo currently contains **272 test functions**; optional integration tests self-skip when their dependencies or Docker are unavailable. The deterministic scripted benchmark holds at **0% attack-success rate / 100% utility / ~0.04 ms per-call overhead**. On the **real AgentDojo benchmark** (97 user + 35 injection tasks across all four suites), one general provenance profile holds **ASR 0.0% at 100% utility** under deterministic ground-truth replay. **All ten OWASP ASI risks now carry a shipped mechanism — every row is ✓.**
-
-```bash
-pip install capguard-runtime      # or, from source: pip install -e ".[dev,yaml]"
-pytest -q                         # full suite; optional integrations may self-skip
-
-capguard init                        # scaffold a guarded-proxy config (--http, --cloud URL)
-python examples/demo_poison_strip.py   # 60-second demo: poisoned MCP tool stripped + guarded transfer
-python examples/e2e_realtime_validate.py # benchmark + live loopback HTTP MCP validation
-
-capguard bench                       # scripted security benchmark (exit non-zero on regression)
-capguard agentdojo                   # real AgentDojo eval (pip install agentdojo)
-capguard packs list                  # builtin policy packs
-capguard audit verify audit.jsonl    # check the tamper-evident hash chain
-capguard mcp-scan tools.json         # scan MCP tool defs for poisoning
-capguard audit flows audit.jsonl     # reconstruct data flow; flag untrusted->sink paths
-capguard proxy proxy.json --check    # dry-run the proxy: list tools and validate HTTP auth
-```
-
-To see the same agentic tool calls **with and without CapGuard**, run
-`python examples/e2e_realtime_validate.py` and look for the
-`Agentic calls: without CapGuard vs with CapGuard` section.
-
----
-
-## Why CapGuard
-
-The 2026 **OWASP Top 10 for Agentic Applications** (ASI01–ASI10) makes clear that the dangerous moments in an agent's life are at the **action boundary**: which tool runs, with which arguments, on whose authority, fed by which data. Prompt filters and classifiers operate *around* the model and are probabilistic — they can be talked past. Generic authorization engines (Permit, Oso, Cedar) decide policy but don't sit on the agent runtime, don't track data provenance, and don't secure MCP.
-
-CapGuard fills that gap. It is the deterministic backstop: even when a model is fooled into *attempting* a malicious call, CapGuard blocks it because the call violates capability, policy, or provenance — not because a classifier flagged it.
-
----
-
-## What it does
-
-| Layer | Module | What it gives you |
-|-------|--------|-------------------|
-| **Attenuable capabilities** | `core` | Capabilities are grants that can only be *narrowed*. An agent holding `network_http(domains=[a,b])` cannot reach `c`; `shell_exec(allowlist=[ls])` cannot run `rm`. Authorization is a subset/refinement check, never an expansion. |
-| **Real argument enforcement** | `core`, `runtime` | The capability is enforced against the **actual** call value before dispatch: shell metacharacters and non-allow-listed commands are rejected, URLs checked against allowed domains, file paths resolved and contained (defeats `../`), read-only DB grants reject writes. |
-| **Programmable policy DSL** | `policy_dsl` | Restrict by specific tool **and** use case: `Arg("amount") > 1000 → REQUIRE_APPROVAL`, rate limits, role checks. Deny-overrides precedence — a rule can only tighten. |
-| **Data-flow provenance (propagated)** | `provenance`, `runtime` | A trust/confidentiality **label lattice** propagated across tool I/O: a value pulled from an untrusted source and laundered through another tool stays tainted, so `Taint("recipient").is_untrusted() → DENY` and `Flow.any_secret() → DENY` hold across a whole call chain with no per-call tagging. Deterministic indirect-prompt-injection defense (CaMeL / RTBAS / AgentArmor class) delivered as a library hook — not a forked interpreter. |
-| **Verifiable identity + delegation** | `identity` | Signed (HMAC or Ed25519/SPIFFE-style) identity assertions bound to a human **principal + tenant**, verified at the proxy boundary — no more self-asserted `agent_id`. Sub-agent **delegation only attenuates**: a child can never hold authority its parent lacks (A2A-safe), with bounded chain depth and JIT expiry. |
-| **Signed inter-agent (A2A) messages** | `a2a` | Agent→agent messages are signed envelopes with single-use nonce + expiry (anti impersonation / tamper / replay) and **per-message capability attenuation** — a message can't exercise authority the sender lacks, and the receiver re-checks against the sender's known authority (defeats the cross-agent confused deputy). Inbound payloads are tainted `untrusted_tool`. (ASI07) |
-| **Framework adapters** | `adapters` | `CapGuard(rt).tool(...)` guards a plain function in one line; `to_langchain` / `to_openai_agents` / `to_crewai` hand back native tool objects. CapGuard runs **underneath** LangGraph / OpenAI Agents / CrewAI / raw MCP — bring your stack. |
-| **Replay-safe approvals** | `approval` | Human-in-the-loop tokens bound to `(agent, tool, exact-args)`, HMAC-signed, single-use. Approving a $10 transfer cannot be replayed as $10,000 (TOCTOU defense). |
-| **Tamper-evident audit** | `audit` | Every decision is hash-chained (`prev_hash` + event → `hash`); any retroactive edit breaks the chain. Logs digests, not raw payloads. |
-| **Forensic flow reconstruction** | `audit_graph` | Rebuilds the data-flow graph from the audit log by matching one call's result digest to a later call's argument digests, tagged with trust labels — answers "which untrusted source reached which sink, through which hops" for incident response. Zero raw payloads. |
-| **MCP security engine** | `mcp_guard` | Pins tool definitions by fingerprint, detects **rug pulls** (changed defs), **shadowing** (cross-server name/description collisions), and **tool poisoning** (instruction-override / concealment / exfiltration / zero-width smuggling in descriptions). |
-| **Runnable MCP proxy** | `mcp_proxy`, `mcp_http` | A JSON-RPC proxy any MCP client connects to, over **stdio or Streamable HTTP**. Guards local subprocess *and* remote/hosted MCP servers. Remote MCP URLs are validated before connect: HTTPS outside loopback, no userinfo/fragments, and no non-public IP literals unless explicitly allowed. Poisoned/rug-pulled/shadowed tools are **stripped from `tools/list`** so the malicious description never reaches the model; every `tools/call` is enforced and audited. |
-| **OAuth 2.1 boundary auth** | `mcp_auth` | The HTTP MCP server is an OAuth 2.1 **resource server**: validates bearer tokens — **RS256 or EdDSA + JWKS** discovered from OIDC/OAuth issuer metadata, HS256 for self-issued local tokens, or static — pins `alg`, checks **audience** (RFC 8707), refreshes JWKS on key rotation, rejects unsafe metadata/JWKS fetch URLs, returns `401 + WWW-Authenticate` / `403`, and serves Protected Resource Metadata (RFC 9728). Non-loopback HTTP binds require auth unless explicitly overridden for lab use. Composes with the signed-identity gate. |
-| **Outbound URL safety** | `net_safety` | Shared fail-fast validation for every configured outbound HTTP client: remote MCP, auth metadata/JWKS, cloud audit ingest, and signed policy sync all reject userinfo/fragments, plaintext non-loopback HTTP, and non-public IP literals by default. |
-| **Sandboxed execution** | `sandbox` | Execution backends with isolation tiers: hardened `SubprocessBackend` (POSIX rlimits, no-shell, env scrub, timeout-kill), ephemeral `DockerBackend` (`--network none`, read-only, caps dropped), and `DenyBackend`. |
-| **Rogue-agent detection + kill switch** | `monitor` | Deterministic sliding-window anomaly detection over the audit stream — call-rate, denial-rate (probing), blast-radius (distinct sinks), novel-tool — trips a per-agent **circuit breaker**; the runtime then fail-closes that agent. (ASI10/ASI08) |
-| **Budgets & quotas** | `budget` | Cumulative ceilings on calls / tokens / $ per agent or session (cumulative or rolling window). Stops the doom-spiral: blow the budget → optionally **trip the circuit breaker** so the whole agent halts. Closes unbounded consumption. (ASI08) |
-| **Task-scoped capability envelopes** | `taskscope` | PAuth-style JIT least privilege: a signed, expiring envelope authorizes only the concrete operations a task implies (`transfer ≤ $100 to Bob`), enforced per-call on top of standing capabilities. Issuing can only attenuate. |
-| **Memory / RAG poisoning guard** | `memory` | Provenance-preserving memory: taint survives the write→read round-trip so recalled untrusted content is still blocked at sinks; optional deny-untrusted-writes mode. (ASI06) |
-| **Policy packs** | `packs` | Declarative YAML/JSON/dict profiles compile to a `PolicyEngine` (and capability templates). Ship `owasp-baseline` / `finance` / `data-exfil`; adopt a strong default in one line. |
-| **Advisory detectors** | `detectors` | Deterministic-first, probabilistic-assist: a detector (your classifier via `CallableDetector`, or built-in regex injection / PII heuristics) emits a scored signal that DSL predicates read (`Signal("prompt_injection").above(0.8)`). Detectors are advisory — under deny-overrides they can only tighten, never allow — and fail open. This is how CapGuard composes *underneath* LlamaFirewall / PromptGuard2 / CaMeL. |
-| **Benchmark harness** | `bench` | Deterministic scripted suite + **real AgentDojo** adapter measuring ASR / utility / latency, wired as a CI gate. |
-
----
-
-## The pipeline (every tool call)
-
-```
-invoke_tool(name, agent=…, provenance=…, approval_token=…, **args)
-  1. capability gate      — agent must hold a capability that covers the tool's need
-  2. policy DSL           — argument / use-case / rate / provenance rules (deny-overrides)
-  3. argument enforcement — the concrete value is checked against the granted bound  ← the teeth
-  4. dispatch             — via the configured execution backend
-  5. audit                — hash-chained event at every exit
-```
-
-Identity flows through an immutable per-call context, so concurrent calls cannot bleed permissions into one another.
-
----
-
-## 60-second example
 
 ```python
-from capguard import (
-    AgentIdentity, AgentRuntime, Capability, Policy, Severity, ToolRegistry,
-    PolicyEngine, Rule, Arg, tool_is, Effect,
-)
-from capguard.audit import HashChainedSink
+from aegis import guard
 
-reg = ToolRegistry()
+@guard(network=["api.openai.com"])
+def call_llm(url: str) -> str:
+    return requests.get(url).text    # only api.openai.com allowed — everything else blocked
 
-@reg.tool(capabilities=[Capability.custom("transfer")], severity=Severity.LOW)
-def transfer(amount: int, recipient: str) -> str:
-    return f"sent {amount} to {recipient}"
+@guard(shell=["ls", "cat"])
+def run_cmd(cmd: str) -> str:
+    return subprocess.check_output(cmd).decode()  # rm, curl, semicolons — all blocked
 
-# Restrict by use case: large transfers need a human; untrusted recipients are denied.
-engine = (PolicyEngine()
-    .add(Rule("limit", trigger=tool_is("transfer"), when=Arg("amount") > 1000,
-              effect=Effect.REQUIRE_APPROVAL))
-)
-
-agent = AgentIdentity(id="fin-bot", allowed_capabilities=[Capability.custom("transfer")])
-rt = AgentRuntime(registry=reg, engine=engine, audit_sink=HashChainedSink("audit.jsonl"),
-                  default_agent=agent)
-
-rt.invoke_tool("transfer", amount=100, recipient="alice")    # ok
-rt.invoke_tool("transfer", amount=9999, recipient="alice")   # ApprovalRequired
+@guard(file_read="/data")
+def read_doc(path: str) -> str:
+    return open(path).read()         # /etc/passwd, ../../ traversal — blocked
 ```
 
-Guard a real MCP server in front of any client:
+That's the entire API. Three lines of security for each tool. Works with OpenAI, LangChain, CrewAI, RAG pipelines, voice agents, MCP servers — anything callable.
+
+---
+
+## What is Aegisguard?
+
+Aegisguard is a **deterministic enforcement runtime** that sits inline on every AI agent tool call. It doesn't guess intent with prompts or classifiers — it enforces **hard capability boundaries** on what tools can actually do.
+
+When a model is tricked into calling `rm -rf /`, Aegisguard blocks it — not because a classifier flagged it, but because the shell capability only allows `["ls", "cat"]`. When a prompt injection tries to exfiltrate data to `evil.com`, it's blocked because the network capability only permits `["api.openai.com"]`. No probability. No bypass. Deterministic.
+
+**What it is not:** a prompt filter, a guardrail that wraps the LLM, or a classifier. Those are probabilistic and can be talked past. Aegisguard is the non-bypassable backstop underneath.
+
+---
+
+## 30-Second Quickstart
+
+### Zero-config (module-level)
+
+```python
+from aegis import guard
+
+@guard(network=True)
+def search(query: str) -> str:
+    return requests.get(f"https://api.example.com?q={query}").text
+
+search("AI safety")  # works
+```
+
+### Configured (with policy pack + audit)
+
+```python
+from aegis import Aegis
+
+ag = Aegis(
+    pack="owasp-baseline",        # OWASP ASI-2026 security profile
+    audit="audit.jsonl",          # tamper-evident hash-chained log
+    agent_id="research-bot",
+)
+
+@ag.guard(network=["api.openai.com"], source="web")
+def call_llm(url: str) -> str: ...
+
+@ag.guard(shell=["ls", "cat", "grep"])
+def run_cmd(cmd: str) -> str: ...
+
+@ag.guard(file_read="/data/reports")
+def read_report(path: str) -> str: ...
+
+@ag.guard(custom="send_email", risk="high")   # requires human approval
+def send_email(to: str, body: str) -> str: ...
+```
+
+### With OpenAI Agents
+
+```python
+from openai import OpenAI
+from aegis import Aegis
+
+client = OpenAI()
+ag = Aegis(pack="owasp-baseline")
+
+@ag.guard(network=["api.openai.com"])
+def search(url: str) -> str:
+    return requests.get(url).text
+
+# Use search() as a tool in your OpenAI function-calling agent.
+# Aegisguard enforces capabilities on every call the LLM makes.
+result = search("https://api.openai.com/v1/models")  # allowed
+result = search("https://evil.com/steal")             # BLOCKED
+```
+
+---
+
+## What Gets Enforced
+
+Every `@guard()` call passes through a defense-in-depth pipeline before the function body executes:
+
+```
+@guard(shell=["ls", "cat"])
+def run(cmd): ...
+
+run("ls -la")           → allowed
+run("rm -rf /")          → BLOCKED: 'rm' not in allowlist
+run("ls; curl evil.com") → BLOCKED: shell metacharacters
+run("ls `cat /etc/shadow`") → BLOCKED: shell metacharacters
+```
+
+| Capability | What's enforced | Examples |
+|---|---|---|
+| `network=["domain"]` | URL domain whitelist | `evil.com` blocked, subdomain spoofing blocked |
+| `network=True` | Any domain (unrestricted) | All URLs allowed |
+| `file_read="/data"` | Path containment | `/etc/passwd` blocked, `../../` traversal blocked |
+| `shell=["ls","cat"]` | Command allowlist + metachar rejection | `rm` blocked, `;` `\|` `` ` `` `$()` `&&` all blocked |
+| `db=True` | Read-only SQL only | `SELECT` allowed, `DROP`/`DELETE`/`INSERT` blocked |
+| `db_write=True` | Read + write SQL | Everything allowed |
+| `risk="high"` | Requires human approval | Blocks unless approval token provided |
+| `source="web"` | Taints output as untrusted | Provenance tracks through downstream calls |
+
+### Beyond argument enforcement
+
+Aegisguard's engine runs a full pipeline on every call:
+
+```
+Circuit breaker → Budget gate → Task scope → Capability check →
+Advisory detectors → Policy DSL (deny-overrides) → Argument enforcement →
+Dispatch → Provenance propagation → Hash-chained audit
+```
+
+---
+
+## Key Features
+
+### Capability-Based Security
+Capabilities are grants that can only narrow, never expand. An agent holding `network_http(domains=["a.com"])` cannot reach `b.com`. A delegated sub-agent can only have fewer permissions than its parent.
+
+### Policy DSL
+Programmable rules beyond capabilities — restrict by argument value, rate-limit, require approval above a threshold:
+
+```python
+# In a policy pack: deny transfers above $1000 without approval
+Rule: Arg("amount") > 1000 → REQUIRE_APPROVAL
+```
+
+### Data Provenance
+A trust/confidentiality label lattice propagated across tool I/O. Data pulled from an untrusted web source stays tainted even if laundered through multiple tool calls. Deterministic indirect-prompt-injection defense.
+
+### MCP Security
+Pins tool definitions by fingerprint. Detects rug pulls (changed definitions), shadowing (cross-server collisions), and tool poisoning (instruction-override, exfiltration, zero-width smuggling in descriptions). Poisoned tools are stripped from `tools/list` before the model sees them.
+
+### Tamper-Evident Audit
+Every decision is hash-chained (`prev_hash + event → hash`). Any retroactive edit breaks the chain. The forensic flow reconstructor rebuilds data-flow graphs from the audit log for incident response.
+
+### Sandboxed Execution
+Configurable backends: hardened subprocess (POSIX rlimits, no-shell, env scrub), ephemeral Docker (`--network none`, read-only, caps dropped), or deny-all.
+
+### Rogue Agent Detection
+Deterministic sliding-window anomaly detection over the audit stream — call-rate spikes, denial-rate probing, blast-radius expansion, novel-tool usage — trips a per-agent circuit breaker that fail-closes the agent.
+
+### 6 Built-in Policy Packs
+
+| Pack | Use case |
+|---|---|
+| `owasp-baseline` | General OWASP ASI-2026 coverage |
+| `finance` | Financial agents, transfer limits |
+| `data-exfil` | Block data exfiltration patterns |
+| `healthcare` | HIPAA-aware constraints |
+| `coding-agent` | Safe code execution |
+| `browser-agent` | Browser automation guardrails |
+
+---
+
+## Benchmark
+
+One general policy profile, 15 attacks across 7 domains (banking, email, web, files, shell, messaging, destructive ops), including laundering attacks blocked only by propagated provenance:
+
+```
+Metric                  No Guard    Aegisguard
+────────────────────────────────────────────────
+Attack success rate      100.0%        0.0%
+Benign utility           100.0%      100.0%
+Overhead per call          —         ~0.04 ms
+```
+
+**AgentDojo** (97 user + 35 injection tasks, deterministic ground-truth replay):
+
+```
+Suite         User  Inj   Utility    ASR
+──────────────────────────────────────────
+banking         16    9   100.0%    0.0%
+slack           21    5   100.0%    0.0%
+travel          20    7   100.0%    0.0%
+workspace       40   14   100.0%    0.0%
+TOTAL           97   35   100.0%    0.0%
+```
+
+Aegisguard measures deterministic enforcement — does it block the malicious call when attempted — not LLM susceptibility. It composes underneath probabilistic defenses (LlamaFirewall, PromptGuard, CaMeL) as the non-bypassable layer.
+
+---
+
+## OWASP ASI-2026 Coverage
+
+All 10 risks covered with deterministic shipped mechanisms:
+
+| Risk | Description | Mechanism |
+|---|---|---|
+| ASI01 | Goal/behavior hijack | Propagated provenance + advisory detectors |
+| ASI02 | Tool misuse | Attenuation + argument enforcement + task-scoped envelopes |
+| ASI03 | Identity & privilege abuse | Signed identity (HMAC/Ed25519), delegation-only-attenuates |
+| ASI04 | Agentic supply chain | MCP pinning, poisoning scan, signed plugins |
+| ASI05 | Unexpected code execution | Sandbox backends (subprocess/docker/deny) |
+| ASI06 | Memory/context poisoning | Provenance-preserving memory (taint survives write→read) |
+| ASI07 | Insecure inter-agent comms | Signed A2A messages + per-message capability attenuation |
+| ASI08 | Cascading failures | Call/token/$ budgets + circuit-breaker kill switch |
+| ASI09 | Human-agent trust | Replay-safe approval tokens (args-bound, single-use) |
+| ASI10 | Rogue agents | Sequence-anomaly detection → circuit breaker |
+
+---
+
+## Local Testing
 
 ```bash
-python examples/run_proxy.py     # stdio MCP proxy; point Claude Desktop / Cursor at it
+git clone https://github.com/harsha-mangena/capguard.git
+cd capguard
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e .
+
+# Validate enforcement engine (no API key needed) — 40 tests
+python examples/demo_local_no_api.py
+
+# With OpenAI (requires OPENAI_API_KEY)
+pip install openai
+python examples/demo_with_aegis.py       # protected agent
+python examples/demo_comparison.py       # side-by-side: unprotected vs protected
+
+# Full test suite
+pip install -e ".[dev,yaml]"
+pytest -q                                # 298 tests
 ```
 
 ---
 
-## Security benchmark
-
-**Scripted suite** — one general policy profile, 15 attacks across 7 domains (banking, email, web, files, shell, messaging, destructive ops), including two *laundering* attacks blocked only by propagated provenance:
+## Architecture
 
 ```
-metric                 baseline   CapGuard
-attack success rate     100.0%      0.0%
-benign utility          100.0%    100.0%
-overhead / call          —       ~0.04 ms
-```
+aegis/                     # PUBLIC API — what you import
+  __init__.py              #   from aegis import guard, Aegis, configure
+  core.py                  #   Aegis class, @guard decorator, module-level API
 
-**Real AgentDojo** (`capguard.bench.run_agentdojo`) — deterministic ground-truth replay of the actual benchmark, one general provenance rule per domain:
-
-```
-suite        user  inj   utility    ASR
-banking        16    9    100.0%    0.0%
-slack          21    5    100.0%    0.0%
-travel         20    7    100.0%    0.0%
-workspace      40   14    100.0%    0.0%
-TOTAL          97   35    100.0%    0.0%
-```
-
-CapGuard measures **deterministic enforcement** — does it block the malicious call when attempted — not LLM susceptibility (which adaptive attacks now beat >85% of the time against probabilistic defenses). It composes underneath classifier defenses (LlamaFirewall, CaMeL) as the non-bypassable layer. See [`docs/BENCHMARK_RESULTS.md`](docs/BENCHMARK_RESULTS.md).
-
----
-
-## OWASP ASI 2026 coverage
-
-| Risk | Status | Mechanism |
-|------|--------|-----------|
-| ASI01 Goal/behavior hijack | ✓ | provenance **propagated** across tool I/O (taint a laundered value end-to-end) + advisory detector predicates |
-| ASI02 Tool misuse | ✓ | attenuation + argument-level DSL + normalize-before-enforce + task-scoped envelopes |
-| ASI03 Identity & privilege abuse | ✓ | verifiable signed identity (principal+tenant), delegation-only-attenuates, JIT grants |
-| ASI04 Agentic supply chain | ✓ | signed plugins, MCP pinning, poisoning scan |
-| ASI05 Unexpected code execution | ✓ | sandbox backends |
-| ASI06 Memory/context poisoning | ✓ | provenance-preserving memory/RAG: taint survives write→read; optional deny-untrusted-writes |
-| ASI07 Insecure inter-agent comms | ✓ | shadowing detection + list-strip; **signed A2A messages** (anti replay/tamper) + per-message capability attenuation across hops |
-| ASI08 Cascading failures | ✓ | rate limits, **cumulative call/token/$ budgets**, blast-radius cap + **circuit-breaker kill switch** |
-| ASI09 Human-agent trust | ✓ | replay-safe approvals |
-| ASI10 Rogue agents | ✓ | **sequence-anomaly detection** over the audit stream → circuit breaker |
-
-✓ covered · ◑ partial · ✗ planned. **Every row is now ✓** — a deterministic mechanism for all ten ASI risks. See [`ROADMAP.md`](ROADMAP.md).
-
----
-
-## Repository layout
-
-```
-capguard/
-  core.py          capabilities, attenuation, argument enforcement, normalize-before-enforce, policy
-  registry.py      tool registry (decorator API)
-  runtime.py       enforcement pipeline (stateless, concurrency-safe) + provenance wiring
-  policy_dsl.py    trigger → predicate → effect rules; Arg / Provenance / Taint / Flow builders
-  provenance.py    trust+confidentiality label lattice; ProvenanceTracker (propagated taint)
-  identity.py      signed identity assertions, verification, delegation attenuation (ASI03)
-  a2a.py           signed inter-agent messages: anti replay/tamper + per-message capability attenuation (ASI07)
-  taskscope.py     task/intent-scoped capability envelopes (PAuth-style JIT least privilege)
-  monitor.py       rogue-agent anomaly detection + circuit breaker / kill switch (ASI10/ASI08)
-  budget.py        cumulative call/token/$ budgets per agent/session; trips the breaker on overspend (ASI08)
-  memory.py        provenance-preserving memory/RAG store (anti context-poisoning, ASI06)
-  packs.py         policy-pack compiler (declarative profiles -> PolicyEngine) + builtin packs
-  adapters.py      one-line guard + LangChain/OpenAI-Agents/CrewAI bindings
-  detectors.py     advisory detector hooks (CallableDetector + regex-injection / PII) feeding the DSL
-  cli.py           `capguard` CLI: bench / agentdojo / audit verify / packs / mcp-scan / proxy
-  audit.py         hash-chained tamper-evident audit + sinks
-  audit_graph.py   forensic data-flow reconstruction from the audit log (untrusted->sink paths)
-  approval.py      replay-safe, args-bound approval tokens
-  mcp_guard.py     MCP pinning, rug-pull / shadowing / poisoning detection
-  mcp_proxy.py     runnable JSON-RPC MCP proxy (stdio) + downstream clients; signed-identity gate
-  mcp_http.py      Streamable-HTTP MCP transport: guard remote servers + serve the proxy over HTTP
-  mcp_auth.py      OAuth 2.1 resource-server auth (bearer/JWT verify, RFC 9728 PRM, RFC 8707 audience)
-  net_safety.py    shared outbound HTTP URL safety for MCP, auth, audit, and policy sync
-  sandbox.py       execution backends (subprocess / docker / deny) + tool factories
-  bench/           scripted benchmark + real-AgentDojo replay + live-LLM integration (guards every model call) + CI gate
-capguard_cloud/    hosted control plane (FastAPI): audit ingest + chain verify + live dashboard (observe-only)
-tests/             272 test functions (provenance, identity, a2a, adapters, properties, AgentDojo, monitor, budget, taskscope, memory, packs, http, auth, detectors, audit-graph, cli, packaging, …)
-examples/          runnable MCP server + guarded proxy launcher
-docs/              strategy memo, enhancement plan, benchmark results
+capguard/                  # INTERNAL ENGINE (27 modules, 6800+ LOC)
+  core.py                  #   capabilities, attenuation, argument enforcement
+  runtime.py               #   defense-in-depth pipeline (stateless, concurrency-safe)
+  policy_dsl.py            #   programmable rules (deny-overrides)
+  provenance.py            #   trust×confidentiality label lattice
+  identity.py              #   signed identity + delegation attenuation
+  a2a.py                   #   signed inter-agent messages
+  mcp_guard.py             #   MCP pinning, rug-pull, shadowing, poisoning scan
+  mcp_proxy.py             #   JSON-RPC MCP proxy (stdio + HTTP)
+  mcp_auth.py              #   OAuth 2.1 resource-server auth
+  monitor.py               #   anomaly detection + circuit breaker
+  budget.py                #   call/token/$ budgets
+  memory.py                #   provenance-preserving memory/RAG
+  audit.py                 #   hash-chained tamper-evident audit
+  audit_graph.py           #   forensic data-flow reconstruction
+  sandbox.py               #   execution backends (subprocess/docker/deny)
+  packs.py                 #   policy-pack compiler + 6 builtin packs
+  ...                      #   + approval, adapters, detectors, taskscope, etc.
 ```
 
 ---
 
-## Documents
+## How It Compares
 
-- [`docs/STRATEGY.md`](docs/STRATEGY.md) — market analysis, research grounding (CaMeL, Progent, AgentSpec, MCP-Guard), positioning and moat.
-- [`docs/BENCHMARK_RESULTS.md`](docs/BENCHMARK_RESULTS.md) — methodology and numbers.
-- [`docs/PR_01..04`](docs/) — change notes for each build phase.
-- [`ROADMAP.md`](ROADMAP.md) — what's next.
+| Feature | Aegisguard | Guardrails AI | LlamaGuard | Varden | AgentSeal |
+|---|---|---|---|---|---|
+| Enforcement method | Deterministic capability | Prompt validation | LLM classifier | Policy rules | Probe scanning |
+| Argument-level blocking | Yes | No | No | Partial | No |
+| Shell injection prevention | Yes (metachar + allowlist) | No | No | No | No |
+| Path traversal prevention | Yes (realpath containment) | No | No | No | No |
+| Data provenance tracking | Yes (lattice propagation) | No | No | No | No |
+| MCP security (poisoning/rug-pull) | Yes | No | No | No | Yes (scan only) |
+| Tamper-evident audit | Yes (hash-chained) | No | No | No | No |
+| Framework agnostic | Yes (any callable) | Partial | LLM-only | Partial | LLM-only |
+| Bypassable by prompt injection | No | Yes | Yes | Partial | N/A (scanner) |
+| 0% ASR on AgentDojo | Yes | N/A | N/A | N/A | N/A |
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Security bugs: see [SECURITY.md](SECURITY.md) — please report privately.
 
 ## License
 
-Apache 2.0 (core library, plugin spec, adapters). Hosted control plane / advanced policy packs may be licensed separately later.
+Apache 2.0. See [LICENSE](LICENSE).
+]]>

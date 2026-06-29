@@ -3,15 +3,15 @@ requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "capguard-runtime"
-version = "0.1.0"
-description = "CapGuard: deterministic security runtime for AI agents with attenuable capabilities, argument-level policy, data provenance, MCP guard + proxy, sandboxed execution, and tamper-evident audit."
+name = "aegisguard"
+version = "0.2.0"
+description = "Aegis: universal AI agent security. One decorator, any framework, full protection. Deterministic capabilities, argument-level policy, data provenance, MCP guard, sandboxed execution, and tamper-evident audit."
 readme = "README.md"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{ name = "Vamsi Sai Ranga Mangina", email = "44197358+harsha-mangena@users.noreply.github.com" }]
-keywords = ["ai-agents", "security", "mcp", "least-privilege", "owasp", "capabilities", "prompt-injection", "agentic"]
+keywords = ["ai-agents", "security", "mcp", "least-privilege", "owasp", "capabilities", "prompt-injection", "agentic", "aegis", "guard", "agent-security"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
@@ -43,11 +43,9 @@ dev = ["pytest>=8.2", "hypothesis>=6.0", "ruff>=0.5", "build>=1.2", "twine>=5.1"
        "fastapi>=0.110", "httpx>=0.27"]
 
 [project.scripts]
-capguard = "capguard.cli:main"
-capguard-bench = "capguard.bench.run_bench:main"
-capguard-agentdojo = "capguard.bench.run_agentdojo:main"
-capguard-live-agentdojo = "capguard.bench.run_live_agentdojo:main"
-capguard-cloud = "capguard_cloud.app:main"
+aegis = "capguard.cli:main"
+aegis-bench = "capguard.bench.run_bench:main"
+aegis-cloud = "capguard_cloud.app:main"
 
 [project.urls]
 Homepage = "https://github.com/harsha-mangena/capguard"
@@ -57,7 +55,7 @@ Changelog = "https://github.com/harsha-mangena/capguard/blob/main/CHANGELOG.md"
 Issues = "https://github.com/harsha-mangena/capguard/issues"
 
 [tool.setuptools.packages.find]
-include = ["capguard*"]
+include = ["aegis*", "capguard*"]
 
 [tool.pytest.ini_options]
 addopts = "-q"

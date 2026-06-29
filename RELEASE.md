@@ -1,13 +1,13 @@
 # Release checklist
 
-CapGuard publishes the PyPI distribution `capguard-runtime`. The Python import
-package and console command remain `capguard`.
+Aegisguard publishes the PyPI distribution `aegisguard`. The Python import
+package is `aegis`; the internal engine is `capguard`.
 
 ## One-time setup
 
 Before the first tag, configure PyPI Trusted Publishing:
 
-- PyPI project name: `capguard-runtime`
+- PyPI project name: `aegisguard`
 - GitHub owner / repository: `harsha-mangena/capguard`
 - Workflow filename: `release.yml`
 - GitHub environment: `pypi`
@@ -17,17 +17,17 @@ reviewers or branch/tag rules you want for production release authority.
 
 ## Preflight
 
-1. Confirm `pyproject.toml` and `capguard/__init__.py` have the same version.
-2. Confirm docs say `pip install capguard-runtime`, not `pip install capguard`.
-3. Confirm the release workflow still uses Trusted Publishing with
+1. Confirm `pyproject.toml` version matches `aegis/__init__.py`.
+2. Confirm README says `pip install aegisguard`.
+3. Confirm the release workflow uses Trusted Publishing with
    `id-token: write` only in the publish job and no password/token secret.
 4. Run the local gate:
 
 ```bash
-python -m pip install -e ".[dev,yaml,crypto,cloud]"
+python -m pip install -e ".[dev,yaml]"
 ruff check capguard tests examples
 pytest -q
-capguard bench
+aegis bench
 rm -rf dist build *.egg-info
 python -m build
 python -m twine check dist/*
@@ -36,26 +36,25 @@ python -m twine check dist/*
 5. Smoke install the wheel in a clean environment:
 
 ```bash
-python -m venv /tmp/capguard-release-smoke
-/tmp/capguard-release-smoke/bin/python -m pip install --upgrade pip
-/tmp/capguard-release-smoke/bin/python -m pip install dist/*.whl
-/tmp/capguard-release-smoke/bin/capguard version
-/tmp/capguard-release-smoke/bin/python - <<'PY'
+python -m venv /tmp/aegisguard-release-smoke
+/tmp/aegisguard-release-smoke/bin/python -m pip install --upgrade pip
+/tmp/aegisguard-release-smoke/bin/python -m pip install dist/*.whl
+/tmp/aegisguard-release-smoke/bin/python - <<'PY'
 import importlib.metadata as md
-import capguard
+from aegis import Aegis, guard
 
-assert md.version("capguard-runtime") == capguard.__version__
-print(f"smoke ok {capguard.__version__}")
+assert md.version("aegisguard")
+print(f"smoke ok {md.version('aegisguard')}")
 PY
 ```
 
 ## Publish
 
-Create and push an annotated version tag that matches the package version:
+Create and push an annotated version tag:
 
 ```bash
-git tag -a v0.1.0 -m "capguard-runtime 0.1.0"
-git push origin v0.1.0
+git tag -a v0.2.0 -m "aegisguard 0.2.0"
+git push origin v0.2.0
 ```
 
 The `release` workflow tests, builds, checks metadata, smoke-installs the wheel,
@@ -66,15 +65,14 @@ then publishes to PyPI via Trusted Publishing.
 Verify the public package from a fresh environment:
 
 ```bash
-python -m venv /tmp/capguard-pypi-verify
-/tmp/capguard-pypi-verify/bin/python -m pip install --upgrade pip
-/tmp/capguard-pypi-verify/bin/python -m pip install capguard-runtime
-/tmp/capguard-pypi-verify/bin/capguard version
-/tmp/capguard-pypi-verify/bin/python - <<'PY'
+python -m venv /tmp/aegisguard-pypi-verify
+/tmp/aegisguard-pypi-verify/bin/python -m pip install --upgrade pip
+/tmp/aegisguard-pypi-verify/bin/python -m pip install aegisguard
+/tmp/aegisguard-pypi-verify/bin/python - <<'PY'
 import importlib.metadata as md
-import capguard
+from aegis import Aegis, guard
 
-assert md.version("capguard-runtime") == capguard.__version__
-print(f"verified {capguard.__version__}")
+assert md.version("aegisguard")
+print(f"verified {md.version('aegisguard')}")
 PY
 ```
