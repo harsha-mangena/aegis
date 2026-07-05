@@ -1,23 +1,23 @@
-# CapGuard
+# Aegisguard
 
 **Least privilege for AI agents — enforced.** A deterministic, non-bypassable
 layer that sits inline on every tool call and every MCP message.
 
-CapGuard is an embeddable Python SDK that makes any agent stack (LangGraph,
+```bash
+pip install aegisguard
+```
+
+```python
+from aegis import guard
+```
+
+Aegisguard is an embeddable Python SDK that makes any agent stack (LangGraph,
 CrewAI, OpenAI Agents, custom loops, or raw MCP) safe by default. It is **not** a
 prompt classifier and **not** a guardrail that guesses intent. It is a
 deterministic enforcement runtime: from capabilities, policy, and data
 provenance it decides whether a concrete tool call is allowed, denied, or needs
 human approval — and backs that with hard isolation and a tamper-evident audit
 trail.
-
-```bash
-pip install capguard-runtime
-```
-
-The PyPI distribution is `capguard-runtime`; imports and the CLI use
-`capguard`. The `agentguard` import alias is included for the simplified
-`AgentGuard` facade.
 
 ## Why it exists
 
@@ -28,8 +28,8 @@ are probabilistic — they can be talked past. Authorization engines decide poli
 but don't sit on the agent runtime, don't track data provenance, and don't secure
 MCP.
 
-CapGuard is the deterministic backstop: even when a model is fooled into
-*attempting* a malicious call, CapGuard blocks it because the call violates
+Aegisguard is the deterministic backstop: even when a model is fooled into
+*attempting* a malicious call, Aegisguard blocks it because the call violates
 capability, policy, or provenance — not because a classifier flagged it.
 
 ## Numbers

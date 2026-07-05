@@ -1,4 +1,4 @@
-"""Tests for `capguard init` scaffolding."""
+"""Tests for `aegis init` scaffolding."""
 
 from __future__ import annotations
 

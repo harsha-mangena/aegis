@@ -1,7 +1,7 @@
 name: release
 
 # Publishes to PyPI on a version tag via Trusted Publishing (OIDC, no API token).
-# One-time setup: add capguard-runtime as a pending publisher on PyPI for this
+# One-time setup: add aegisguard as a pending publisher on PyPI for this
 # repo + workflow, and create a GitHub environment named "pypi".
 on:
   push:
@@ -50,23 +50,23 @@ jobs:
       - name: Tests
         run: pytest -q
       - name: Security benchmark gate
-        run: capguard bench
+        run: aegis bench
       - name: Build sdist + wheel
         run: |
           python -m build
           python -m twine check dist/*
       - name: Smoke install wheel
         run: |
-          python -m venv /tmp/capguard-release-smoke
-          /tmp/capguard-release-smoke/bin/python -m pip install --upgrade pip
-          /tmp/capguard-release-smoke/bin/python -m pip install dist/*.whl
-          /tmp/capguard-release-smoke/bin/capguard version
-          /tmp/capguard-release-smoke/bin/python - <<'PY'
+          python -m venv /tmp/aegisguard-release-smoke
+          /tmp/aegisguard-release-smoke/bin/python -m pip install --upgrade pip
+          /tmp/aegisguard-release-smoke/bin/python -m pip install dist/*.whl
+          /tmp/aegisguard-release-smoke/bin/aegis version
+          /tmp/aegisguard-release-smoke/bin/python - <<'PY'
           import importlib.metadata as md
-          import capguard
+          from aegis import Aegis, guard
 
-          assert md.version("capguard-runtime") == capguard.__version__
-          print(f"smoke ok {capguard.__version__}")
+          assert md.version("aegisguard")
+          print(f"smoke ok {md.version('aegisguard')}")
           PY
       - name: Upload distributions
         uses: actions/upload-artifact@v4
@@ -80,7 +80,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/project/capguard-runtime/
+      url: https://pypi.org/project/aegisguard/
     permissions:
       contents: read
       id-token: write   # required for PyPI Trusted Publishing

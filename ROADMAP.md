@@ -22,7 +22,7 @@ Legend: ✅ done · 🔜 next · 🔭 later · status against the 2026 OWASP Top
 - ✅ **Verifiable identity + delegation attenuation** — signed (HMAC/Ed25519) assertions bound to principal+tenant, verified at the proxy boundary; sub-agent delegation only narrows authority. *(ASI03, ASI07)*
 - ✅ **Normalize-before-enforce hardening** — NFKC + control/zero-width/NUL rejection so encoded payloads can't slip past `enforce`. *(ASI02)*
 - ✅ **Property-based + fuzz tests** (Hypothesis) — lattice algebra, attenuation monotonicity, audit-chain tamper-evidence, smuggling rejection.
-- ✅ **Framework adapters** — one-line `CapGuard` facade + `to_langchain` / `to_openai_agents` / `to_crewai` native bindings.
+- ✅ **Framework adapters** — one-line `Aegisguard` facade + `to_langchain` / `to_openai_agents` / `to_crewai` native bindings.
 - ✅ **Real-AgentDojo adapter** — deterministic ground-truth replay across all four suites (97 user / 35 injection): **ASR 0% @ 100% utility**.
 - ✅ **Rogue-agent detection + circuit breaker** — deterministic sliding-window anomaly detection (call/denial-rate, blast-radius, novel-tool) over the audit stream → per-agent kill switch; runtime fail-closes. *(ASI10, ASI08)*
 - ✅ **Task/intent-scoped capability envelopes** — PAuth-style signed, expiring, per-argument-constrained JIT grants; issuing only attenuates. *(ASI02, ASI03)*
@@ -36,7 +36,7 @@ Legend: ✅ done · 🔜 next · 🔭 later · status against the 2026 OWASP Top
 - ✅ **Advisory detector hooks** — `Detector` protocol + `CallableDetector` (wire any classifier) + built-in regex-injection / PII heuristics; `Signal(...)` DSL predicate. Deterministic-first: advisory-only, fail-open, can only tighten. *(ASI01)*
 - ✅ **Budgets & quotas** — cumulative call/token/$ ceilings per agent/session (cumulative or rolling window); overspend trips the circuit breaker. Closes unbounded consumption / doom-spirals. *(ASI08)*
 - ✅ **Signed inter-agent (A2A) messages** — signed message envelopes (anti impersonation/tamper), single-use nonce + expiry (anti-replay), and per-message capability attenuation across hops (the scope semantics A2A/Transaction-Tokens omit); inbound payloads tainted. *(ASI07)*
-- ✅ **Forensic provenance reconstruction** — rebuilds the data-flow graph from the tamper-evident audit log (result-digest → argument-digest edges + trust labels) and surfaces untrusted-source → sink paths for incident response; `capguard audit flows`. *(ASI10 evidence)*
+- ✅ **Forensic provenance reconstruction** — rebuilds the data-flow graph from the tamper-evident audit log (result-digest → argument-digest edges + trust labels) and surfaces untrusted-source → sink paths for incident response; `aegis audit flows`. *(ASI10 evidence)*
 
 > **Every one of the ten OWASP ASI risks now has a deterministic shipped mechanism (all ✓).** The repo currently contains 272 test functions; optional integration tests self-skip when their dependencies or Docker are unavailable.
 
@@ -46,7 +46,7 @@ Legend: ✅ done · 🔜 next · 🔭 later · status against the 2026 OWASP Top
 
 ### 1. Live-LLM AgentDojo — integration shipped; numbers need a model key
 The guarded runtime ships (`capguard.bench.live_agentdojo.GuardedFunctionsRuntime`):
-it routes **every tool call a live model emits** through CapGuard and derives
+it routes **every tool call a live model emits** through Aegisguard and derives
 provenance from the source boundary (not ground truth). Validated against real
 AgentDojo environments in `tests/test_live_agentdojo.py` (no key). Deterministic
 replay also ships (`run_agentdojo`, ASR 0% @ 100% utility). Next:
@@ -68,7 +68,7 @@ streaming** (GET stream + resumability) and `Mcp-Session-Id` lifecycle.
 
 ### 4. Policy-pack compiler — core shipped
 Compiler + `owasp-baseline` / `finance` / `data-exfil` packs ship (`capguard.packs`).
-Next: more packs (healthcare, coding-agent, browser-agent), a `capguard packs lint`
+Next: more packs (healthcare, coding-agent, browser-agent), a `aegis packs lint`
 CLI, and signed/pinned pack distribution.
 
 ### 5. Packaging & docs
@@ -94,7 +94,7 @@ Deterministic anomaly detection + circuit breaker ship (`capguard.monitor`). Nex
 
 ### Framework adapters (first-class)
 - LangGraph node/tool wrappers, CrewAI tool wrapper, OpenAI Agents SDK tool shim, LlamaIndex — each routing through the runtime with zero ceremony.
-- A Cedar/OPA predicate backend so teams can bring their existing policy engine and use CapGuard purely as the enforcement point.
+- A Cedar/OPA predicate backend so teams can bring their existing policy engine and use Aegisguard purely as the enforcement point.
 
 ### Inter-agent (A2A) security *(ASI07)* — core shipped
 Signed messages + per-message capability attenuation ship (`capguard.a2a`). Next:
@@ -110,5 +110,5 @@ through the runtime automatically, and full multi-hop delegation-chain propagati
 
 1. **Deterministic-first.** Enforcement never depends on a model guessing intent; classifiers are optional advisory inputs, never the gate.
 2. **Least privilege by construction.** Capabilities only narrow; unknown is denied or escalated.
-3. **Composability over lock-in.** Bring your framework, your policy engine, your classifier — CapGuard is the enforcement point underneath.
+3. **Composability over lock-in.** Bring your framework, your policy engine, your classifier — Aegisguard is the enforcement point underneath.
 4. **Prove it.** Every security claim has a test and a benchmark number; security regressions fail CI.

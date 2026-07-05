@@ -1,17 +1,17 @@
-"""``capguard`` command-line interface.
+"""``aegis`` command-line interface.
 
 The "5-minute adoption" surface: every shipped capability is usable without
 writing Python, and every command returns a CI-meaningful exit code (0 = good,
 non-zero = a security regression / failure), so the same binary drops into a
 pipeline gate.
 
-    capguard version
-    capguard bench                      # scripted security benchmark (CI gate)
-    capguard agentdojo                  # real AgentDojo eval (needs `pip install agentdojo`)
-    capguard audit verify <file.jsonl>  # check the tamper-evident hash chain
-    capguard packs list|show|lint ...   # inspect / validate policy packs
-    capguard mcp-scan <tooldefs.json>   # scan MCP tool definitions for poisoning
-    capguard proxy <config.json> [--check]   # run / dry-check the guarded MCP proxy
+    aegis version
+    aegis bench                      # scripted security benchmark (CI gate)
+    aegis agentdojo                  # real AgentDojo eval (needs `pip install agentdojo`)
+    aegis audit verify <file.jsonl>  # check the tamper-evident hash chain
+    aegis packs list|show|lint ...   # inspect / validate policy packs
+    aegis mcp-scan <tooldefs.json>   # scan MCP tool definitions for poisoning
+    aegis proxy <config.json> [--check]   # run / dry-check the guarded MCP proxy
 """
 
 from __future__ import annotations
@@ -391,8 +391,8 @@ def _cmd_init(args) -> int:
         return 1
     out.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {out}\n  1. edit the downstreams / agent capabilities\n"
-          f"  2. capguard proxy {out} --check     # connect, validate auth & list tools\n"
-          f"  3. capguard proxy {out}             # serve")
+          f"  2. aegis proxy {out} --check     # connect, validate auth & list tools\n"
+          f"  3. aegis proxy {out}             # serve")
     return 0
 
 

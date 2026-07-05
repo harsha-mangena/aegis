@@ -21,7 +21,7 @@ us not to.
 
 ## What counts as a vulnerability
 
-Because CapGuard is an enforcement layer, the highest-severity classes are
+Because Aegisguard is an enforcement layer, the highest-severity classes are
 **bypasses of the deterministic guarantees**, e.g.:
 
 - a call that exceeds a granted capability is allowed (argument-enforcement bypass);

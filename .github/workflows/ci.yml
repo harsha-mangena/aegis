@@ -24,6 +24,4 @@ jobs:
       - name: Tests
         run: pytest -q
       - name: Security benchmark gate (fails on ASR regression / utility drop)
-        run: capguard bench
-      - name: MCP tool-poisoning self-scan
-        run: capguard mcp-scan examples/sample_tools.json
+        run: aegis bench

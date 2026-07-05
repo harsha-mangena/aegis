@@ -1,6 +1,6 @@
 # Guarding MCP servers
 
-CapGuard is a security proxy any MCP client (Claude Desktop, Cursor, an agent)
+Aegisguard is a security proxy any MCP client (Claude Desktop, Cursor, an agent)
 connects to, over **stdio** or **Streamable HTTP**. It guards local subprocess
 *and* remote/hosted MCP servers. Poisoned, rug-pulled, and shadowed tools are
 **stripped from `tools/list`** so the malicious description never reaches the
@@ -8,8 +8,8 @@ model; every `tools/call` is enforced and audited.
 
 ## stdio (local servers)
 
-```bash
-python examples/run_proxy.py     # point Claude Desktop / Cursor at this stdio proxy
+```python
+from capguard import MCPProxy  # see example below
 ```
 
 ## Streamable HTTP (remote servers)
@@ -73,12 +73,10 @@ shape.
 ## Run from a config
 
 ```bash
-capguard proxy proxy.json --check     # dry-run: connect, validate HTTP auth, list post-guard tools
-capguard proxy proxy.json             # serve (transport: stdio | http in the config)
+aegis proxy proxy.json --check     # dry-run: connect, validate HTTP auth, list post-guard tools
+aegis proxy proxy.json             # serve (transport: stdio | http in the config)
 ```
 
 A poisoned MCP tool is quarantined before it ever reaches the model:
 
-```bash
-python examples/demo_poison_strip.py
-```
+Poisoned tools are detected by fingerprint change and stripped before reaching the model.

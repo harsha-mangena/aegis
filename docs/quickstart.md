@@ -1,88 +1,62 @@
 # Quickstart
 
 ```bash
-pip install capguard-runtime
+pip install aegisguard
 ```
 
-The distribution is named `capguard-runtime` on PyPI; the Python package and CLI
-remain `capguard`. The `agentguard` import alias is available for the simplified
-`AgentGuard` facade.
-
-## 60 seconds: guard any agent's tools
+## 30 seconds: guard any tool
 
 ```python
-from agentguard import AgentGuard
+from aegis import guard
 
-guard = AgentGuard("support-agent")
-
-@guard.tool(network=["api.example.com"])
+@guard(network=["api.example.com"])
 def search(url: str) -> str:
     return http_get(url)
 
 search(url="https://api.example.com/docs")      # allowed
-search(url="https://evil.example/steal")        # denied
+search(url="https://evil.example/steal")         # BLOCKED
 ```
 
-`AgentGuard` creates the runtime, identity, provenance tracker, and default OWASP
-policy for you. Pass the guarded callables to whatever agent framework you use.
+## Configured instance with policy pack
 
 ```python
-agent = create_agent(model="gpt-4o", tools=guard.langchain_tools())
+from aegis import Aegis
+
+ag = Aegis(
+    pack="owasp-baseline",
+    agent_id="support-agent",
+    audit="audit.jsonl",
+)
+
+@ag.guard(network=["api.example.com"])
+def search(url: str) -> str: ...
+
+@ag.guard(shell=["ls", "cat", "grep"])
+def run_cmd(cmd: str) -> str: ...
+
+@ag.guard(custom="send_email", risk="high")
+def send_email(to: str, body: str) -> str: ...
 ```
 
-Or wrap an existing agent object:
-
-```python
-from agentguard import guard_agent
-
-secured = guard_agent(existing_agent, tools=[search], framework="langchain")
-agent = secured.bind()       # uses bind_tools(...) when the framework exposes it
-```
-
-See the live demo:
+## Run the demos
 
 ```bash
-python -m capguard.cli version
-python examples/simple_agentguard.py    # guard tools for any agent/framework
-python examples/demo_poison_strip.py     # poisoned MCP tool stripped + guarded transfer
+python examples/demo_local_no_api.py     # 40 enforcement tests, no API key
+python examples/demo_with_aegis.py       # OpenAI agent with aegisguard (needs OPENAI_API_KEY)
+python examples/demo_comparison.py       # side-by-side: unprotected vs protected
 ```
-
-## Embed under your framework
-
-```python
-from agentguard import AgentGuard
-
-guard = AgentGuard("research-agent")
-
-@guard.tool(network=["api.corp.com"])
-def search(url: str) -> str:
-    ...
-
-lc_tool = search.as_langchain()      # native LangChain StructuredTool, still guarded
-```
-
-`search.as_openai_agents()` and `search.as_crewai()` work the same way. CapGuard
-runs **underneath** your framework; the LLM provider can be OpenAI, Anthropic,
-Gemini, local models, or anything else because the action boundary is the same.
 
 ## Adopt a strong default in one line
 
 ```python
-from capguard import compile_pack
-engine = compile_pack("owasp-baseline")   # or "finance", "data-exfil"
+from aegis import Aegis
+ag = Aegis(pack="owasp-baseline")   # or "finance", "data-exfil", "healthcare"
 ```
 
-## Stop a laundered injection with propagated provenance
+## CLI
 
-```python
-from agentguard import AgentGuard
-
-guard = AgentGuard("rag-agent")
-
-@guard.tool(name="send_message", capability="send_message")
-def send_message(channel: str, text: str) -> str:
-    return "sent"
-
-poisoned = guard.untrusted(retriever.invoke("invoice instructions"), source="rag")
-guard.invoke("send_message", channel="#x", text=poisoned)        # DENIED by default sink policy
+```bash
+aegis bench                          # security benchmark gate
+aegis audit verify audit.jsonl       # check tamper-evident hash chain
+aegis packs list                     # list builtin policy packs
 ```

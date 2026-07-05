@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to CapGuard are documented here. Format loosely follows
+All notable changes to Aegisguard are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com); this project uses semantic-ish
 versioning pre-1.0.
 
@@ -49,10 +49,10 @@ ASI-2026 risk has a shipped mechanism.
 - Shared outbound URL safety for remote MCP, auth discovery, cloud audit ingest,
   and signed policy sync.
 - Advisory detectors (deterministic-first, probabilistic-assist).
-- Forensic data-flow reconstruction from the audit log (`capguard audit flows`).
+- Forensic data-flow reconstruction from the audit log (`aegis audit flows`).
 
 ### Tooling
-- `capguard` CLI: `bench`, `agentdojo`, `audit verify|flows`, `packs`, `mcp-scan`,
+- `aegis` CLI: `bench`, `agentdojo`, `audit verify|flows`, `packs`, `mcp-scan`,
   `proxy`.
 - Policy-pack compiler with builtin `owasp-baseline` / `finance` / `data-exfil`.
 - Framework adapters: LangChain / LangGraph, OpenAI Agents SDK, CrewAI.

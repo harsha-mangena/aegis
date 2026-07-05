@@ -4,27 +4,27 @@ Every command returns a CI-meaningful exit code (0 good, non-zero = failure /
 regression), so the same binary drops into a pipeline gate.
 
 ```text
-capguard version
-capguard bench                       # scripted security benchmark; exits non-zero on ASR>0 or utility<100
-capguard agentdojo                   # real AgentDojo eval (pip install agentdojo)
-capguard audit verify <file.jsonl>   # verify the tamper-evident hash chain
-capguard audit flows  <file.jsonl>   # reconstruct data flow; flag untrusted -> sink paths
-capguard packs list | show <name> | lint <name|path>
-capguard mcp-scan <tooldefs.json>    # scan MCP tool definitions for poisoning
-capguard proxy <config.json> [--check]   # run / dry-check the guarded MCP proxy
+aegis version
+aegis bench                       # scripted security benchmark; exits non-zero on ASR>0 or utility<100
+aegis agentdojo                   # real AgentDojo eval (pip install agentdojo)
+aegis audit verify <file.jsonl>   # verify the tamper-evident hash chain
+aegis audit flows  <file.jsonl>   # reconstruct data flow; flag untrusted -> sink paths
+aegis packs list | show <name> | lint <name|path>
+aegis mcp-scan <tooldefs.json>    # scan MCP tool definitions for poisoning
+aegis proxy <config.json> [--check]   # run / dry-check the guarded MCP proxy
 ```
 
 ## Examples
 
 ```bash
 # CI gate: fail the build if the deterministic defense regressed
-capguard bench
+aegis bench
 
 # Incident response: which untrusted source reached which sink?
-capguard audit flows audit.jsonl --sinks "send_*,transfer"
+aegis audit flows audit.jsonl --sinks "send_*,transfer"
 
 # Supply-chain check on a vendor's MCP tool list
-capguard mcp-scan vendor_tools.json
+aegis mcp-scan vendor_tools.json
 ```
 
 ## Proxy config (`proxy.json`)
@@ -53,7 +53,7 @@ capguard mcp-scan vendor_tools.json
 
 `auth.type` also supports `jwt-rs256-jwks`, `jwt-eddsa-jwks`, `jwt-hs256` for
 self-issued local tokens, and `static` for simple fixed-token deployments. For
-production, prefer `jwt-jwks` with `issuer_url`; CapGuard discovers `jwks_uri`
+production, prefer `jwt-jwks` with `issuer_url`; Aegisguard discovers `jwks_uri`
 from OAuth Authorization Server Metadata or OIDC Discovery. Remote keysets
 refresh on unknown `kid` and after `jwks_cache_ttl_seconds`, so normal issuer
 key rotation does not require restarting the guard. Explicit `metadata_url`,
@@ -77,7 +77,7 @@ loopback hosts. If `http.host` is `0.0.0.0`, a public IP, or another
 non-loopback interface, configure `auth` or set
 `http.allow_unauthenticated_remote: true` as an explicit lab-only override.
 
-For HTTP proxy configs, `capguard proxy proxy.json --check` also builds the
+For HTTP proxy configs, `aegis proxy proxy.json --check` also builds the
 configured token verifier, so bad issuer discovery, unsafe metadata/JWKS URLs,
 missing HMAC secrets, and malformed inline JWKS material fail in CI before the
 server starts.

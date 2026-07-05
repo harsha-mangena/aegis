@@ -20,5 +20,5 @@ A clear description of the bug.
 What you expected, and what happened instead (include the exact error / decision).
 
 **Environment**
-- capguard version: `python -c "import capguard; print(capguard.__version__)"`
+- aegisguard version: `python -c "from aegis import Aegis; import importlib.metadata; print(importlib.metadata.version('aegisguard'))"`
 - Python version / OS:
