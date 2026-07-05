@@ -66,7 +66,7 @@ capability attenuation/enforcement, the policy DSL, data provenance
 
 ## Real AgentDojo (deterministic ground-truth replay)
 
-`aegis agentdojo` (requires `pip install agentdojo`) runs Aegisguard against the **actual** AgentDojo task suites. It
+`aegis agentdojo` runs Aegisguard against the **actual** AgentDojo task suites using embedded fixtures (no external deps) or `--live` mode (`pip install agentdojo`). It
 replays each task's ground-truth tool-call sequence — the correct solution for a
 user task, the attacker's goal for an injection task — through the enforcement
 runtime. The ground-truth sequence is a faithful, model-free stand-in for what a

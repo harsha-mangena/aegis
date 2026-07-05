@@ -19,7 +19,7 @@ from capguard.core import PolicyDecision
 # --------------------------------------------------------------------------- #
 def test_version(capsys):
     assert main(["version"]) == 0
-    assert "capguard" in capsys.readouterr().out
+    assert "aegisguard" in capsys.readouterr().out
 
 
 def test_no_command_prints_help():

@@ -1,9 +1,9 @@
-"""Live-LLM AgentDojo integration — CapGuard as the action-layer backstop.
+"""Live-LLM AgentDojo integration — Aegisguard as the action-layer backstop.
 
 The deterministic adapter (``agentdojo_adapter.py``) replays ground-truth tool
 calls; useful, but a reviewer rightly discounts self-reported replay numbers.
 This module is the *real* hook: a drop-in ``FunctionsRuntime`` subclass that
-makes AgentDojo route **every tool call a live model emits through CapGuard
+makes AgentDojo route **every tool call a live model emits through Aegisguard
 before it executes**. Hand the class to AgentDojo's `run_task_with_pipeline`,
 point the pipeline at GPT-4o / Claude, and the ASR/utility you get is end-to-end
 with a real model in the loop.
@@ -82,7 +82,7 @@ def _secure_profile(suite_name: str, tool_names: List[str]):
 
 
 def make_guarded_runtime_class(suite_name: str):
-    """Return a ``FunctionsRuntime`` subclass that guards every call via CapGuard.
+    """Return a ``FunctionsRuntime`` subclass that guards every call via Aegisguard.
 
     Pass it to ``suite.run_task_with_pipeline(..., runtime_class=Cls)``.
     """
@@ -107,7 +107,7 @@ def make_guarded_runtime_class(suite_name: str):
                 self._cap.invoke_tool(function, agent=self._agent, provenance=prov, **kwargs)
             except _BLOCKED as exc:
                 self.blocked.append((function, str(exc)))
-                return "", f"CapGuardBlocked: {exc}"   # the model sees a tool error, as with a real guard
+                return "", f"AegisguardBlocked: {exc}"   # the model sees a tool error, as with a real guard
             result, error = super().run_function(env, function, kwargs, raise_on_error)
             src = UNTRUSTED_TOOL if function in self._sources else None
             self._tracker.record_output(result, list(kwargs.values()), source=src)
@@ -139,7 +139,7 @@ def run_live(
     user_task_ids: Optional[List[str]] = None,
     injection_task_ids: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
-    """Run a real AgentDojo pipeline with CapGuard guarding every tool call.
+    """Run a real AgentDojo pipeline with Aegisguard guarding every tool call.
 
     ``pipeline`` is an ``agentdojo.agent_pipeline.AgentPipeline`` (your model).
     Returns end-to-end utility and ASR from AgentDojo's own ``(success,

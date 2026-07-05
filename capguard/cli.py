@@ -7,7 +7,7 @@ pipeline gate.
 
     aegis version
     aegis bench                      # scripted security benchmark (CI gate)
-    aegis agentdojo                  # real AgentDojo eval (needs `pip install agentdojo`)
+    aegis agentdojo                  # real AgentDojo eval (embedded fixtures, no deps)
     aegis audit verify <file.jsonl>  # check the tamper-evident hash chain
     aegis packs list|show|lint ...   # inspect / validate policy packs
     aegis mcp-scan <tooldefs.json>   # scan MCP tool definitions for poisoning
@@ -208,7 +208,7 @@ def _build_http_auth_from_config(cfg: Dict[str, Any]):
 # command handlers (each returns an exit code)
 # --------------------------------------------------------------------------- #
 def _cmd_version(_args) -> int:
-    print(f"capguard {__version__}")
+    print(f"aegisguard {__version__}")
     return 0
 
 
@@ -217,9 +217,42 @@ def _cmd_bench(_args) -> int:
     return bench_main()
 
 
-def _cmd_agentdojo(_args) -> int:
-    from .bench.run_agentdojo import main as ad_main
-    return ad_main()
+def _cmd_agentdojo(args) -> int:
+    from .bench.agentdojo_adapter import (
+        _agentdojo_installed,
+        available,
+        evaluate_all,
+        export_fixtures,
+        format_results,
+    )
+
+    if getattr(args, "export_fixtures", False):
+        return export_fixtures()
+
+    live = getattr(args, "live", False)
+
+    if live and not _agentdojo_installed():
+        print("--live requires the agentdojo package:", file=sys.stderr)
+        print("  pip install agentdojo", file=sys.stderr)
+        return 2
+
+    if not available():
+        print("No AgentDojo data source found.\n", file=sys.stderr)
+        print("Option 1 — export fixtures (one-time, then no dependency):", file=sys.stderr)
+        print("  pip install agentdojo", file=sys.stderr)
+        print("  aegis agentdojo --export-fixtures", file=sys.stderr)
+        print("  pip uninstall agentdojo  # optional\n", file=sys.stderr)
+        print("Option 2 — use agentdojo live:", file=sys.stderr)
+        print("  pip install agentdojo", file=sys.stderr)
+        print("  aegis agentdojo --live\n", file=sys.stderr)
+        print("For the self-contained benchmark (no external deps):", file=sys.stderr)
+        print("  aegis bench", file=sys.stderr)
+        return 2
+
+    source = "live" if live else "fixtures"
+    results = evaluate_all(live=live)
+    print(format_results(results, source=source))
+    return 0
 
 
 def _cmd_audit_verify(args) -> int:
@@ -397,13 +430,18 @@ def _cmd_init(args) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="capguard",
-                                description="Deterministic security runtime for AI agents.")
+    p = argparse.ArgumentParser(prog="aegis",
+                                description="Aegisguard — deterministic security runtime for AI agents.")
     sub = p.add_subparsers(dest="cmd")
 
     sub.add_parser("version", help="print the version").set_defaults(func=_cmd_version)
     sub.add_parser("bench", help="run the scripted security benchmark (CI gate)").set_defaults(func=_cmd_bench)
-    sub.add_parser("agentdojo", help="run the real AgentDojo eval").set_defaults(func=_cmd_agentdojo)
+    ad = sub.add_parser("agentdojo", help="run the real AgentDojo eval")
+    ad.add_argument("--live", action="store_true",
+                    help="use the agentdojo package instead of embedded fixtures")
+    ad.add_argument("--export-fixtures", action="store_true",
+                    help="extract ground-truth from agentdojo → fixtures/*.json (one-time)")
+    ad.set_defaults(func=_cmd_agentdojo)
 
     a = sub.add_parser("audit", help="audit-log tools")
     asub = a.add_subparsers(dest="audit_cmd")
@@ -430,7 +468,7 @@ def build_parser() -> argparse.ArgumentParser:
     ms.set_defaults(func=_cmd_mcp_scan)
 
     ini = sub.add_parser("init", help="scaffold a guarded-proxy config (stdio/http, optional cloud)")
-    ini.add_argument("--out", default="capguard.proxy.json")
+    ini.add_argument("--out", default="aegis.proxy.json")
     ini.add_argument("--http", action="store_true", help="serve over HTTP + OAuth instead of stdio")
     ini.add_argument("--cloud", default="", help="control-plane audit ingest URL to stream to")
     ini.add_argument("--force", action="store_true", help="overwrite an existing file")
@@ -449,6 +487,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = parser.parse_args(argv)
     func = getattr(args, "func", None)
     if func is None:  # no (sub)command chosen
+        # Sensible defaults: bare `aegis packs` → list, bare `aegis audit` → audit help
+        if args.cmd == "packs":
+            args.packs_cmd = "list"
+            return _cmd_packs(args)
+        if args.cmd == "audit":
+            # Re-parse to show audit-specific help
+            build_parser().parse_args(["audit", "--help"])
+            return 0
         parser.print_help()
         return 0
     return func(args)

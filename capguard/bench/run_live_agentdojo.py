@@ -1,4 +1,4 @@
-"""Run the live-LLM AgentDojo benchmark with CapGuard guarding every tool call.
+"""Run the live-LLM AgentDojo benchmark with Aegisguard guarding every tool call.
 
     OPENAI_API_KEY=...  python -m capguard.bench.run_live_agentdojo --suite banking --model gpt-4o-2024-08-06
 
@@ -132,7 +132,7 @@ def main(argv: Optional[list] = None) -> int:
         print("agentdojo is not installed. Run: pip install agentdojo", file=sys.stderr)
         return 2
 
-    parser = argparse.ArgumentParser(prog="capguard-live-agentdojo")
+    parser = argparse.ArgumentParser(prog="aegis-live-agentdojo")
     parser.add_argument("--suite", default="banking",
                         choices=["banking", "slack", "travel", "workspace"])
     parser.add_argument("--model", default="gpt-4o-2024-08-06")

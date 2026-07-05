@@ -1,6 +1,6 @@
-"""Deterministic security benchmark harness for CapGuard.
+"""Deterministic security benchmark harness for Aegisguard.
 
-CapGuard is a *deterministic enforcement layer*. This harness measures the
+Aegisguard is a *deterministic enforcement layer*. This harness measures the
 thing it is actually responsible for: when a prompt-injected / compromised
 agent attempts a malicious tool call, does the enforcement layer block it —
 and does the same policy still let the legitimate (benign) calls through?
@@ -187,11 +187,11 @@ def run(scenarios: List[Scenario], runtime: AgentRuntime, executors: Dict[str, C
 
 def format_report(rep: Report) -> str:
     lines = [
-        "CapGuard deterministic security benchmark",
+        "Aegisguard deterministic security benchmark",
         "=" * 52,
         f"Scenarios attacks: {rep.total_attacks}   benign: {rep.total_benign}",
         "",
-        f"{'metric':<22}{'baseline':>12}{'CapGuard':>12}",
+        f"{'metric':<22}{'baseline':>12}{'Aegisguard':>12}",
         "-" * 46,
         f"{'attack success rate':<22}{rep.baseline_asr:>11.1%}{rep.guarded_asr:>12.1%}",
         f"{'benign utility':<22}{rep.baseline_utility:>11.1%}{rep.guarded_utility:>12.1%}",

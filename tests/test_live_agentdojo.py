@@ -52,7 +52,7 @@ def test_laundered_value_into_sink_is_blocked_in_real_env():
     _, err = grt.run_function(env, "send_money", {
         "recipient": "US133000000121212121212", "amount": 1.0,
         "subject": content, "date": "2024-01-01"})
-    assert err and str(err).startswith("CapGuardBlocked")
+    assert err and str(err).startswith("AegisguardBlocked")
     assert any(fn == "send_money" for fn, _ in grt.blocked)
 
 

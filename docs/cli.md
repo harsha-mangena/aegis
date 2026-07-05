@@ -6,7 +6,9 @@ regression), so the same binary drops into a pipeline gate.
 ```text
 aegis version
 aegis bench                       # scripted security benchmark; exits non-zero on ASR>0 or utility<100
-aegis agentdojo                   # real AgentDojo eval (pip install agentdojo)
+aegis agentdojo                   # real AgentDojo eval (embedded fixtures, no deps)
+aegis agentdojo --live            # real AgentDojo eval (pip install agentdojo)
+aegis agentdojo --export-fixtures # extract ground-truth data for offline use
 aegis audit verify <file.jsonl>   # verify the tamper-evident hash chain
 aegis audit flows  <file.jsonl>   # reconstruct data flow; flag untrusted -> sink paths
 aegis packs list | show <name> | lint <name|path>
