@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/logo-animated.svg" width="280" alt="Aegisguard logo" />
+  <img src="https://raw.githubusercontent.com/harsha-mangena/aegis/main/docs/logo-animated.svg" width="280" alt="Aegisguard logo" />
 </p>
 
 # Aegisguard
