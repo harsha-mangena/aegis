@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aegisguard"
-version = "0.2.0"
+version = "0.2.1"
 description = "Aegis: universal AI agent security. One decorator, any framework, full protection. Deterministic capabilities, argument-level policy, data provenance, MCP guard, sandboxed execution, and tamper-evident audit."
 readme = "README.md"
 requires-python = ">=3.10"

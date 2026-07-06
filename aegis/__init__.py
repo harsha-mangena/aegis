@@ -23,7 +23,7 @@ Or configure once, guard everything:
     def fetch(url: str) -> str: ...
 """
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 from .core import Aegis, configure, guard, observe, reset
 
