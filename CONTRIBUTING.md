@@ -5,8 +5,8 @@ Thanks for helping make least-privilege for AI agents real and enforced.
 ## Dev setup
 
 ```bash
-git clone https://github.com/harsha-mangena/capguard
-cd capguard
+git clone https://github.com/harsha-mangena/aegis
+cd aegis
 pip install -e ".[dev,yaml]"
 pytest -q                 # full suite; optional integrations may self-skip
 ruff check capguard tests examples

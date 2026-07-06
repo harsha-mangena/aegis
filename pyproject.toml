@@ -48,11 +48,11 @@ aegis-bench = "capguard.bench.run_bench:main"
 aegis-cloud = "capguard_cloud.app:main"
 
 [project.urls]
-Homepage = "https://github.com/harsha-mangena/capguard"
-Repository = "https://github.com/harsha-mangena/capguard"
-Documentation = "https://github.com/harsha-mangena/capguard#readme"
-Changelog = "https://github.com/harsha-mangena/capguard/blob/main/CHANGELOG.md"
-Issues = "https://github.com/harsha-mangena/capguard/issues"
+Homepage = "https://github.com/harsha-mangena/aegis"
+Repository = "https://github.com/harsha-mangena/aegis"
+Documentation = "https://github.com/harsha-mangena/aegis#readme"
+Changelog = "https://github.com/harsha-mangena/aegis/blob/main/CHANGELOG.md"
+Issues = "https://github.com/harsha-mangena/aegis/issues"
 
 [tool.setuptools.packages.find]
 include = ["aegis*", "capguard*"]

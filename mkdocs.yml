@@ -1,8 +1,8 @@
 site_name: Aegisguard
 site_description: The deterministic security runtime for AI agents.
-site_url: https://github.com/harsha-mangena/capguard
-repo_url: https://github.com/harsha-mangena/capguard
-repo_name: harsha-mangena/capguard
+site_url: https://github.com/harsha-mangena/aegis
+repo_url: https://github.com/harsha-mangena/aegis
+repo_name: harsha-mangena/aegis
 
 theme:
   name: material

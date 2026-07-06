@@ -8,7 +8,7 @@ Aegisguard is a security tool, so we take vulnerabilities in it seriously.
 
 Report privately via GitHub Security Advisories
 ("Security" tab → "Report a vulnerability") on
-<https://github.com/harsha-mangena/capguard>, or email the maintainer listed in
+<https://github.com/harsha-mangena/aegis>, or email the maintainer listed in
 `pyproject.toml`.
 
 Include: affected version/commit, a minimal reproduction, and the impact (e.g.

@@ -8,7 +8,7 @@ package is `aegis`; the internal engine is `capguard`.
 Before the first tag, configure PyPI Trusted Publishing:
 
 - PyPI project name: `aegisguard`
-- GitHub owner / repository: `harsha-mangena/capguard`
+- GitHub owner / repository: `harsha-mangena/aegis`
 - Workflow filename: `release.yml`
 - GitHub environment: `pypi`
 

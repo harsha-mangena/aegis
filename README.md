@@ -234,8 +234,8 @@ All 10 risks covered with deterministic shipped mechanisms:
 ## Local Testing
 
 ```bash
-git clone https://github.com/harsha-mangena/capguard.git
-cd capguard
+git clone https://github.com/harsha-mangena/aegis.git
+cd aegis
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e .
 
