@@ -57,6 +57,9 @@ Issues = "https://github.com/harsha-mangena/capguard/issues"
 [tool.setuptools.packages.find]
 include = ["aegis*", "capguard*"]
 
+[tool.setuptools.package-data]
+"capguard.bench.fixtures" = ["*.json"]
+
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
